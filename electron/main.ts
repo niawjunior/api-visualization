@@ -271,6 +271,34 @@ app.on("ready", async () => {
       });
   });
 
+  // Detect Project (Worker Thread)
+  ipcMain.handle('detect-project', async (event, rootPath: string) => {
+      if (!isPathAllowed(rootPath)) {
+          throw new Error('Access denied: Path outside allowed directory');
+      }
+
+      return new Promise((resolve, reject) => {
+          const { Worker } = require('worker_threads');
+          const workerPath = path.join(__dirname, 'tools/searchWorker.js');
+          const worker = new Worker(workerPath);
+          
+          worker.on('message', (msg: any) => {
+              if (msg.type === 'success') resolve(msg.results);
+              else {
+                  console.error('Project detection error:', msg.error);
+                  resolve({ type: 'unknown', isProject: false }); // Fallback
+              }
+              worker.terminate();
+          });
+          worker.on('error', (err: any) => {
+              console.error('Project detection unexpected error:', err);
+              resolve({ type: 'unknown', isProject: false });
+              worker.terminate();
+          });
+          worker.postMessage({ type: 'detect-project', payload: { path: rootPath } });
+      });
+  });
+
   // File Watcher
   let currentWatcher: any = null;
   const chokidar = require('chokidar');

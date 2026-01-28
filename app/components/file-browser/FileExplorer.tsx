@@ -16,16 +16,10 @@ import { useFileNavigation } from './useFileNavigation';
 import { useSmartSuggestions } from './useSmartSuggestions';
 import { useFileExplorerHotkeys } from './useFileExplorerHotkeys';
 import { Dashboard } from '../dashboard/Dashboard';
+import type { FileEntry } from '@/lib/types';
 
-export interface FileEntry {
-  name: string;
-  path: string;
-  isDirectory: boolean;
-  size: number;
-  lastModified: number;
-  childCount?: number;
-  preview?: string; // Search result preview
-}
+// Re-export for backwards compatibility
+export type { FileEntry } from '@/lib/types';
 
 interface FileExplorerProps {
   files: FileEntry[];

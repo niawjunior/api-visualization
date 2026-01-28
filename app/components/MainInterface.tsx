@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { FileExplorer } from './file-browser/FileExplorer';
 import { useFileSync } from './hooks/useFileSync';
+import { useProjectDetection } from './hooks/useProjectDetection';
 import { HeaderControls } from './HeaderControls';
 import VisualProjectMap from './visual/VisualProjectMap';
-import { Dashboard } from './dashboard/Dashboard';
 
 export default function MainInterface() {
   const [showExplorer, setShowExplorer] = useState(true);
@@ -21,6 +21,9 @@ export default function MainInterface() {
     handleClearFilters,
     isRefreshing,
   } = useFileSync();
+
+  // Project detection via extracted hook
+  const { detectedProject } = useProjectDetection(currentPath);
 
   // Watch directory for changes
   useEffect(() => {
@@ -67,23 +70,11 @@ export default function MainInterface() {
           activeFilesCount={activeFiles.length}
         />
         
-        {/* If no path, our file explorer (dashboard inside it) handles the "Welcome" view. 
-            So this main area should likely be the Visual Map or empty.
-            Wait, in Nami, when currentPath is empty, the FileExplorer WIDENS (w-[850px]) and shows Dashboard INSIDE it.
-            And the main chat area shrinks.
-
-            Here, if currentPath is empty:
-            - Sidebar is w-[850px].
-            - Main Area is flex-1.
-
-            If currentPath is set:
-            - Sidebar is w-[380px].
-            - Main Area shows Visual Map.
-        */}
         <div className="w-full h-full relative">
             <VisualProjectMap 
                 files={activeFiles}
                 currentPath={currentPath}
+                detectedProject={detectedProject}
                 onNavigate={handleNavigate}
                 onOpenFile={(path) => window.electron?.openPath(path)}
             />

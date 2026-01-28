@@ -17,6 +17,15 @@ declare global {
       getDirectoryStats: (path: string) => Promise<{ totalSize: number; fileCount: number; folderCount: number; types: Record<string, number> }>;
       searchContent: (args: { directory: string; query: string; extensions?: string[] }) => Promise<{ matches: any[]; totalMatches: number }>;
       analyzeDependencies: (path: string) => Promise<{ nodes: any[]; edges: any[] }>;
+      detectProject: (path: string) => Promise<{ 
+        path: string; 
+        type: 'nextjs' | 'vite' | 'node' | 'python' | 'unknown'; 
+        isProject: boolean; 
+        name?: string; 
+        version?: string;
+        dependencies?: string[]; 
+        configFiles?: string[] 
+      }>;
       getPathForFile: (file: File) => string;
     };
   }

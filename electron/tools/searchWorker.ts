@@ -19,6 +19,10 @@ parentPort?.on('message', async (task) => {
         } else if (task.type === 'deps') {
             const results = await analyzeDependencies(task.payload.path);
             parentPort?.postMessage({ type: 'success', results });
+        } else if (task.type === 'detect-project') {
+            const { detectProject } = await import('./lib/project-detection');
+            const results = await detectProject(task.payload.path);
+            parentPort?.postMessage({ type: 'success', results });
         }
     } catch (error: any) {
         parentPort?.postMessage({ type: 'error', error: error.message });

@@ -1,22 +1,46 @@
+'use client';
+
 import React from 'react';
-import { Search, Layout, Share2, Settings2, X } from 'lucide-react';
+import { Search, Layout, GitFork, X, Hexagon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { DetectedProject, ProjectType } from '@/lib/types';
+
+// Project type display configuration
+interface ProjectTypeConfig {
+  icon: React.ReactNode;
+  label: string;
+  color: string;
+}
+
+const projectTypeConfig: Record<ProjectType, ProjectTypeConfig> = {
+  nextjs: { icon: <Hexagon size={14} />, label: 'Next.js', color: 'text-blue-500' },
+  vite: { icon: <Hexagon size={14} />, label: 'Vite', color: 'text-purple-500' },
+  node: { icon: <Hexagon size={14} />, label: 'Node.js', color: 'text-green-500' },
+  python: { icon: <Hexagon size={14} />, label: 'Python', color: 'text-yellow-500' },
+  unknown: { icon: <Hexagon size={14} />, label: 'Folder', color: 'text-muted-foreground' },
+};
 
 interface VisualControlsProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  graphMode: 'structure' | 'dependency';
-  setGraphMode: (mode: 'structure' | 'dependency') => void;
+  detectedProject: DetectedProject | null;
+  canShowDependencies: boolean;
+  showDependencies: boolean;
+  setShowDependencies: (show: boolean) => void;
   className?: string;
 }
 
 export function VisualControls({
   searchQuery,
   setSearchQuery,
-  graphMode,
-  setGraphMode,
+  detectedProject,
+  canShowDependencies,
+  showDependencies,
+  setShowDependencies,
   className
 }: VisualControlsProps) {
+  const config = projectTypeConfig[detectedProject?.type || 'unknown'];
+
   return (
     <div className={cn(
       "absolute top-4 right-4 z-20 flex flex-col gap-2",
@@ -49,10 +73,10 @@ export function VisualControls({
       {/* Mode Toggle */}
       <div className="flex bg-secondary/50 p-1 rounded-lg">
         <button
-          onClick={() => setGraphMode('structure')}
+          onClick={() => setShowDependencies(false)}
           className={cn(
             "flex-1 flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-            graphMode === 'structure' 
+            !showDependencies 
               ? "bg-background text-foreground shadow-sm" 
               : "text-muted-foreground hover:text-foreground hover:bg-background/50"
           )}
@@ -60,30 +84,41 @@ export function VisualControls({
           <Layout size={14} />
           Structure
         </button>
-        <button
-          onClick={() => setGraphMode('dependency')}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-            graphMode === 'dependency' 
-              ? "bg-background text-foreground shadow-sm" 
-              : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-          )}
-          title="Dependency View"
-        >
-          <Share2 size={14} />
-          Relations
-        </button>
+        {canShowDependencies && (
+          <button
+            onClick={() => setShowDependencies(true)}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+              showDependencies 
+                ? "bg-background text-foreground shadow-sm" 
+                : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+            )}
+            title="View Import/Export Relationships"
+          >
+            <GitFork size={14} />
+            Dependencies
+          </button>
+        )}
       </div>
       
-      {/* Stats / Info */}
-      <div className="flex items-center justify-between px-1 pt-1">
-         <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-            {graphMode === 'structure' ? 'File System' : 'Import Graph'}
-         </span>
-         <button className="text-muted-foreground hover:text-foreground hover:bg-secondary/80 p-1 rounded">
-            <Settings2 size={14} />
-         </button>
-      </div>
+      {/* Project Indicator */}
+      {detectedProject?.isProject && (
+        <div className="flex items-center justify-between px-1 pt-1">
+           <span className={cn("text-[10px] uppercase tracking-wider font-semibold flex items-center gap-1", config.color)}>
+              {config.icon}
+              {config.label} Project
+           </span>
+        </div>
+      )}
+
+      {/* Non-project indicator */}
+      {!detectedProject?.isProject && (
+        <div className="flex items-center justify-between px-1 pt-1">
+           <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+              File System
+           </span>
+        </div>
+      )}
     </div>
   );
 }

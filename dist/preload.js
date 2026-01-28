@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld("electron", {
     getDirectoryStats: (path) => ipcRenderer.invoke('get-directory-stats', path),
     searchContent: (args) => ipcRenderer.invoke('search-content', args),
     analyzeDependencies: (path) => ipcRenderer.invoke('analyze-dependencies', path),
+    detectProject: (path) => ipcRenderer.invoke('detect-project', path),
     // Get file path from dropped File object
     getPathForFile: (file) => webUtils.getPathForFile(file),
 });
