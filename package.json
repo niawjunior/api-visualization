@@ -2,25 +2,94 @@
   "name": "api-visualization",
   "version": "0.1.0",
   "private": true,
+  "main": "dist/main.js",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "dev": "concurrently \"npm run dev:react\" \"npm run dev:electron\"",
+    "dev:react": "next dev",
+    "dev:electron": "wait-on tcp:3000 && tsc electron/main.ts electron/preload.ts electron/tools/fs.ts electron/tools/lib/types.ts electron/tools/lib/utils.ts electron/tools/lib/scanner.ts electron/tools/lib/read.ts  electron/tools/lib/analyze.ts electron/tools/searchWorker.ts --outDir dist --target esnext --module commonjs --esModuleInterop --skipLibCheck && electron . --dev",
+    "build": "next build && tsc electron/main.ts electron/preload.ts electron/tools/fs.ts electron/tools/lib/types.ts electron/tools/lib/utils.ts electron/tools/lib/read.ts  electron/tools/lib/analyze.ts electron/tools/searchWorker.ts --outDir dist --target esnext --module commonjs --esModuleInterop --skipLibCheck",
+    "dist": "npm run build && electron-builder",
+    "start": "electron .",
+    "lint": "next lint"
+  },
+  "build": {
+    "appId": "com.apivis.app",
+    "productName": "API Visualization",
+    "asar": true,
+    "compression": "maximum",
+    "files": [
+      "dist/**/*",
+      "out/**/*",
+      "package.json",
+      "!node_modules/**/*.md",
+      "!node_modules/**/*.txt",
+      "!node_modules/**/*.d.ts",
+      "!node_modules/**/*.map"
+    ],
+    "directories": {
+      "output": "dist_app"
+    },
+    "mac": {
+      "target": {
+        "target": "dmg",
+        "arch": "arm64"
+      },
+      "category": "public.app-category.productivity",
+      "electronLanguages": [
+        "en"
+      ]
+    },
+    "extraResources": [
+      ".env"
+    ]
   },
   "dependencies": {
+    "@hono/node-server": "^1.19.8",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-icons": "^1.3.2",
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-switch": "^1.2.6",
+    "@types/dagre": "^0.7.53",
+    "chokidar": "^5.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "dagre": "^0.8.5",
+    "dotenv": "^17.2.3",
+    "electron-serve": "^3.0.0",
+    "electron-store": "^8.2.0",
+    "framer-motion": "^12.29.2",
+    "get-port": "^7.1.0",
+    "glob": "^13.0.0",
+    "hono": "^4.11.4",
+    "lucide-react": "^0.563.0",
+    "mammoth": "^1.11.0",
     "next": "16.1.6",
+    "pdf-parse": "^2.4.5",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "react-virtuoso": "^4.18.1",
+    "reactflow": "^11.11.4",
+    "recharts": "^3.7.0",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss-animate": "^1.0.7",
+    "trash": "^10.0.1",
+    "xlsx": "^0.18.5",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^25.0.7",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.19",
+    "concurrently": "^9.2.1",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.4.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5",
+    "wait-on": "^7.2.0"
   }
 }
