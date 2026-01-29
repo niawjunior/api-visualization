@@ -24,6 +24,8 @@ export function useDependencyGraph({ currentPath, enabled }: UseDependencyGraphO
     if (!enabled || !currentPath) {
       setNodes([]);
       setEdges([]);
+      setIsLoading(false); // Reset loading state when disabled
+      setError(null);
       return;
     }
 

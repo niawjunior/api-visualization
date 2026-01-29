@@ -45,6 +45,13 @@ function VisualProjectMapContent({ files, currentPath, detectedProject, onNaviga
   // Determine if we CAN show dependencies
   const canShowDependencies = detectedProject?.isProject && detectedProject?.type !== 'unknown';
 
+  // Reset showDependencies when navigating to a non-project folder
+  useEffect(() => {
+    if (!canShowDependencies) {
+      setShowDependencies(false);
+    }
+  }, [canShowDependencies]);
+
   // Use dependency graph hook
   const { 
     nodes: depNodes, 
