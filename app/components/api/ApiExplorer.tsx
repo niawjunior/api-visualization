@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Filter, Loader2, AlertCircle, RefreshCw, Network } from 'lucide-react';
+import { Search, Filter, Loader2, AlertCircle, RefreshCw, Network, GitBranch } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { ApiEndpointCard } from './ApiEndpointCard';
 import { ApiMethodBadge } from './ApiMethodBadge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import ApiDependencyGraph from './ApiDependencyGraph';
 
 interface ApiExplorerProps {
     currentPath: string;
@@ -16,6 +17,29 @@ interface ApiExplorerProps {
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
 
+interface DependencyInfo {
+    name: string;
+    module: string;
+    type: 'service' | 'database' | 'external' | 'utility';
+    usage?: string;
+}
+
+interface GroupedDependency {
+    module: string;
+    moduleLabel: string;
+    type: 'service' | 'database' | 'external' | 'utility';
+    items: string[];
+    count: number;
+}
+
+interface LocalApiDependencies {
+    services: DependencyInfo[];
+    database: DependencyInfo[];
+    external: DependencyInfo[];
+    utilities: DependencyInfo[];
+    grouped?: GroupedDependency[];
+}
+
 interface LocalApiEndpoint {
     path: string;
     methods: HttpMethod[];
@@ -23,6 +47,7 @@ interface LocalApiEndpoint {
     queryParams: { name: string; type: string; required: boolean }[];
     requestBody?: { name: string; type: string; required: boolean }[];
     responseBody?: { name: string; type: string; required: boolean }[];
+    dependencies?: LocalApiDependencies;
     filePath: string;
     relativePath: string;
     lineNumber: number;
@@ -38,6 +63,7 @@ export function ApiExplorer({ currentPath, onOpenFile }: ApiExplorerProps) {
     const [searchQuery, setSearchQuery] = useState('');
     const [methodFilter, setMethodFilter] = useState<HttpMethod[]>([]);
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+    const [selectedEndpoint, setSelectedEndpoint] = useState<LocalApiEndpoint | null>(null);
     
     // Load endpoints
     const loadEndpoints = async () => {
@@ -222,6 +248,7 @@ export function ApiExplorer({ currentPath, onOpenFile }: ApiExplorerProps) {
                                                 isExpanded={expandedIndex === globalIndex}
                                                 onToggle={() => setExpandedIndex(expandedIndex === globalIndex ? null : globalIndex)}
                                                 onOpenFile={onOpenFile}
+                                                onViewDependencies={() => setSelectedEndpoint(ep)}
                                             />
                                         );
                                     })}
@@ -229,9 +256,20 @@ export function ApiExplorer({ currentPath, onOpenFile }: ApiExplorerProps) {
                             </div>
                         ))}
                     </div>
-                )}
+                )} 
                 </div>
             </div>
+            
+            {/* Dependency Graph Overlay */}
+            <AnimatePresence>
+                {selectedEndpoint && (
+                    <ApiDependencyGraph
+                        endpoint={selectedEndpoint}
+                        onClose={() => setSelectedEndpoint(null)}
+                        onOpenFile={onOpenFile}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }

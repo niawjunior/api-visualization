@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronRight, Copy, Check, FileCode, ExternalLink } from 'lucide-react';
+import { ChevronDown, ChevronRight, Copy, Check, FileCode, ExternalLink, GitBranch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ApiMethodBadge } from './ApiMethodBadge';
 
@@ -34,6 +34,7 @@ interface ApiEndpointCardProps {
     isExpanded?: boolean;
     onToggle?: () => void;
     onOpenFile?: (path: string) => void;
+    onViewDependencies?: () => void;
 }
 
 function SchemaTree({ fields, level = 0 }: { fields: SchemaField[]; level?: number }) {
@@ -52,7 +53,7 @@ function SchemaTree({ fields, level = 0 }: { fields: SchemaField[]; level?: numb
     );
 }
 
-export function ApiEndpointCard({ endpoint, isExpanded, onToggle, onOpenFile }: ApiEndpointCardProps) {
+export function ApiEndpointCard({ endpoint, isExpanded, onToggle, onOpenFile, onViewDependencies }: ApiEndpointCardProps) {
     const [copied, setCopied] = useState(false);
     
     const generateCurl = () => {
@@ -138,6 +139,16 @@ export function ApiEndpointCard({ endpoint, isExpanded, onToggle, onOpenFile }: 
                                     <FileCode className="w-3 h-3" />
                                     {endpoint.relativePath}
                                 </button>
+                                
+                                {onViewDependencies && (
+                                    <button
+                                        onClick={onViewDependencies}
+                                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 rounded-md transition-colors"
+                                    >
+                                        <GitBranch className="w-3 h-3" />
+                                        View Dependencies
+                                    </button>
+                                )}
                             </div>
                             
                             {/* Parameters */}

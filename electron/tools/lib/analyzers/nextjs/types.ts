@@ -36,6 +36,29 @@ export interface ResponseSchema {
 // Route Analysis Types
 // ============================================================================
 
+export interface ApiDependencies {
+    services: DependencyInfo[];     // @/lib/*, @/services/*
+    database: DependencyInfo[];     // prisma, supabase, mongoose
+    external: DependencyInfo[];     // fetch URLs, axios calls
+    utilities: DependencyInfo[];    // shared helpers
+    grouped: GroupedDependency[];   // Grouped by module for UI display
+}
+
+export interface DependencyInfo {
+    name: string;           // Function or module name
+    module: string;         // Import path
+    type: 'service' | 'database' | 'external' | 'utility';
+    usage?: string;         // How it's used (optional context)
+}
+
+export interface GroupedDependency {
+    module: string;         // Import path (e.g., 'drizzle-orm')
+    moduleLabel: string;    // Display name (e.g., 'drizzle-orm')
+    type: 'service' | 'database' | 'external' | 'utility';
+    items: string[];        // Function names (e.g., ['eq', 'and', 'inArray'])
+    count: number;          // Number of items
+}
+
 export interface RouteSchema {
     method: HttpMethod;
     path: string;
@@ -43,6 +66,7 @@ export interface RouteSchema {
     requestBody?: ObjectSchema;
     queryParams?: ObjectSchema;
     responses: ResponseSchema[];
+    dependencies?: ApiDependencies;
 }
 
 export interface ApiEndpoint {
@@ -57,6 +81,7 @@ export interface ApiEndpoint {
         isError: boolean;
         schema: PropertySchema[];
     }>;
+    dependencies?: ApiDependencies;
     filePath: string;
     relativePath: string;
     lineNumber: number;

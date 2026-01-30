@@ -21,6 +21,7 @@ import { filePathToRoutePath, extractRouteParams, findMethodLineNumber } from '.
 import { extractRequestBody } from './extractors/request';
 import { extractResponses } from './extractors/response';
 import { extractQueryParams, extractRouteParamsFromFunction } from './extractors/params';
+import { extractApiDependencies } from './extractors/api-dependencies';
 
 // ============================================================================
 // Constants
@@ -117,6 +118,7 @@ function analyzeNode(
     const requestBody = extractRequestBody(ctx, functionBody);
     const responses = extractResponses(ctx, functionBody);
     const queryParams = extractQueryParams(ctx, functionBody);
+    const dependencies = extractApiDependencies(ctx, functionBody, sourceFile);
     
     return {
         method: methodName as HttpMethod,
@@ -125,6 +127,7 @@ function analyzeNode(
         requestBody,
         queryParams,
         responses,
+        dependencies,
     };
 }
 
@@ -220,6 +223,7 @@ export async function analyzeApiEndpoints(projectPath: string): Promise<ApiEndpo
                         isError: r.isError,
                         schema: r.schema.properties,
                     })),
+                    dependencies: route.dependencies,
                     filePath: route.filePath,
                     relativePath: path.relative(projectPath, route.filePath),
                     lineNumber: 1,

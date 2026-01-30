@@ -15,6 +15,29 @@ interface SchemaField {
   children?: SchemaField[];
 }
 
+interface DependencyInfo {
+  name: string;
+  module: string;
+  type: 'service' | 'database' | 'external' | 'utility';
+  usage?: string;
+}
+
+interface GroupedDependency {
+  module: string;
+  moduleLabel: string;
+  type: 'service' | 'database' | 'external' | 'utility';
+  items: string[];
+  count: number;
+}
+
+interface ApiDependencies {
+  services: DependencyInfo[];
+  database: DependencyInfo[];
+  external: DependencyInfo[];
+  utilities: DependencyInfo[];
+  grouped: GroupedDependency[];
+}
+
 interface ApiEndpoint {
   path: string;
   methods: ('GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS')[];
@@ -27,6 +50,7 @@ interface ApiEndpoint {
     isError: boolean;
     schema: SchemaField[];
   }>;
+  dependencies?: ApiDependencies;
   filePath: string;
   relativePath: string;
   lineNumber: number;

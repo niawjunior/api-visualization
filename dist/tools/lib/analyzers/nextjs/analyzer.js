@@ -19,6 +19,7 @@ const path_utils_1 = require("./utils/path-utils");
 const request_1 = require("./extractors/request");
 const response_1 = require("./extractors/response");
 const params_1 = require("./extractors/params");
+const api_dependencies_1 = require("./extractors/api-dependencies");
 // ============================================================================
 // Constants
 // ============================================================================
@@ -94,6 +95,7 @@ function analyzeNode(node, checker, sourceFile, apiPath, filePath) {
     const requestBody = (0, request_1.extractRequestBody)(ctx, functionBody);
     const responses = (0, response_1.extractResponses)(ctx, functionBody);
     const queryParams = (0, params_1.extractQueryParams)(ctx, functionBody);
+    const dependencies = (0, api_dependencies_1.extractApiDependencies)(ctx, functionBody, sourceFile);
     return {
         method: methodName,
         path: apiPath,
@@ -101,6 +103,7 @@ function analyzeNode(node, checker, sourceFile, apiPath, filePath) {
         requestBody,
         queryParams,
         responses,
+        dependencies,
     };
 }
 function hasExportModifier(node) {
@@ -184,6 +187,7 @@ async function analyzeApiEndpoints(projectPath) {
                         isError: r.isError,
                         schema: r.schema.properties,
                     })),
+                    dependencies: route.dependencies,
                     filePath: route.filePath,
                     relativePath: path_1.default.relative(projectPath, route.filePath),
                     lineNumber: 1,
