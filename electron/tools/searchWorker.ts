@@ -23,6 +23,10 @@ parentPort?.on('message', async (task) => {
             const { detectProject } = await import('./lib/project-detection');
             const results = await detectProject(task.payload.path);
             parentPort?.postMessage({ type: 'success', results });
+        } else if (task.type === 'analyze-route') {
+            const { analyzeRouteFile } = await import('./lib/analyzers/nextjs');
+            const results = analyzeRouteFile(task.payload.path);
+            parentPort?.postMessage({ type: 'success', results });
         }
     } catch (error: any) {
         parentPort?.postMessage({ type: 'error', error: error.message });

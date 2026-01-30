@@ -1,5 +1,38 @@
 export {};
 
+// API Endpoint Types
+interface RouteParam {
+  name: string;
+  type: string;
+  required: boolean;
+  description?: string;
+}
+
+interface SchemaField {
+  name: string;
+  type: string;
+  required: boolean;
+  children?: SchemaField[];
+}
+
+interface ApiEndpoint {
+  path: string;
+  methods: ('GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS')[];
+  params: RouteParam[];
+  queryParams: RouteParam[];
+  requestBody?: SchemaField[];
+  responseBody?: SchemaField[];
+  responses: Array<{
+    statusCode?: number;
+    isError: boolean;
+    schema: SchemaField[];
+  }>;
+  filePath: string;
+  relativePath: string;
+  lineNumber: number;
+  description?: string;
+}
+
 declare global {
   interface Window {
     electron: {
@@ -25,6 +58,25 @@ declare global {
         version?: string;
         dependencies?: string[]; 
         configFiles?: string[] 
+      }>;
+      analyzeApiEndpoints: (path: string) => Promise<{ 
+        success: boolean; 
+        endpoints: ApiEndpoint[]; 
+        error?: string 
+      }>;
+      analyzeRoute: (filePath: string) => Promise<{
+        routes: Array<{
+          method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD';
+          path: string;
+          filePath: string;
+          requestBody?: { properties: Array<{ name: string; type: string; optional: boolean }> };
+          responses: Array<{
+            schema: { properties: Array<{ name: string; type: string; optional: boolean }> };
+            statusCode?: number;
+            isError: boolean;
+          }>;
+        }>;
+        errors: string[];
       }>;
       getPathForFile: (file: File) => string;
     };

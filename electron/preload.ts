@@ -21,6 +21,8 @@ contextBridge.exposeInMainWorld("electron", {
   searchContent: (args: { directory: string; query: string; extensions?: string[] }) => ipcRenderer.invoke('search-content', args),
   analyzeDependencies: (path: string) => ipcRenderer.invoke('analyze-dependencies', path),
   detectProject: (path: string) => ipcRenderer.invoke('detect-project', path),
+  analyzeApiEndpoints: (path: string) => ipcRenderer.invoke('analyze-api-endpoints', path),
+  analyzeRoute: (filePath: string) => ipcRenderer.invoke('analyze-route', filePath),
   
   // Get file path from dropped File object
   getPathForFile: (file: File) => webUtils.getPathForFile(file),

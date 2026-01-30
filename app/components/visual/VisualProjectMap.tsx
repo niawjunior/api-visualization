@@ -17,8 +17,9 @@ import 'reactflow/dist/style.css';
 import FolderNode from './nodes/FolderNode';
 import FileNode from './nodes/FileNode';
 import { buildGraphFromFiles, getLayoutedElements } from './utils/graphBuilder';
-import { VisualControls } from './VisualControls';
+import { VisualControls, ViewMode } from './VisualControls';
 import { useDependencyGraph } from '../hooks/useDependencyGraph';
+import { ApiExplorer } from '../api/ApiExplorer';
 import type { DetectedProject, FileEntry } from '@/lib/types';
 
 // --- Props ---
@@ -40,47 +41,70 @@ function VisualProjectMapContent({ files, currentPath, detectedProject, onNaviga
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showDependencies, setShowDependencies] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('structure');
 
-  // Determine if we CAN show dependencies
+  // Determine if we CAN show dependencies/api
   const canShowDependencies = detectedProject?.isProject && detectedProject?.type !== 'unknown';
+  
+  // Get the project root path (for dependency analysis)
+  const projectRootPath = detectedProject?.path || currentPath;
 
-  // Reset showDependencies when navigating to a non-project folder
+  // Debug: Log path changes
+  useEffect(() => {
+    console.log('[VisualProjectMap] Paths changed:', {
+      currentPath,
+      projectRootPath,
+      detectedProjectPath: detectedProject?.path,
+      viewMode
+    });
+  }, [currentPath, projectRootPath, detectedProject?.path, viewMode]);
+
+  // Reset viewMode when navigating to a non-project folder
   useEffect(() => {
     if (!canShowDependencies) {
-      setShowDependencies(false);
+      setViewMode('structure');
     }
   }, [canShowDependencies]);
 
-  // Use dependency graph hook
+  // Clear graph when current path changes (force refresh)
+  useEffect(() => {
+    console.log('[VisualProjectMap] Path changed, clearing graph');
+    setNodes([]);
+    setEdges([]);
+  }, [currentPath, setNodes, setEdges]);
+
+  // Use dependency graph hook with CURRENT PATH (updates when navigating folders)
   const { 
     nodes: depNodes, 
     edges: depEdges, 
     isLoading: isLoadingDeps 
   } = useDependencyGraph({ 
-    currentPath, 
-    enabled: showDependencies && !!canShowDependencies 
+    currentPath: currentPath, // Use current path - updates when navigating
+    enabled: viewMode === 'dependencies' && !!canShowDependencies 
   });
 
   // Structure Mode: Build graph from files
   useEffect(() => {
-    if (showDependencies || !files || !currentPath) return;
+    if (viewMode !== 'structure' || !files || !currentPath) return;
 
     const { nodes: newNodes, edges: newEdges } = buildGraphFromFiles(files, currentPath);
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(newNodes, newEdges, 'LR');
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
-  }, [files, currentPath, showDependencies, setNodes, setEdges]);
+  }, [files, currentPath, viewMode, setNodes, setEdges]);
 
   // Dependency Mode: Use nodes/edges from hook
   useEffect(() => {
-    if (!showDependencies || !canShowDependencies) return;
-    setNodes(depNodes);
-    setEdges(depEdges);
-  }, [showDependencies, canShowDependencies, depNodes, depEdges, setNodes, setEdges]);
+    if (viewMode !== 'dependencies' || !canShowDependencies) return;
+    if (depNodes.length > 0 || depEdges.length > 0) {
+      setNodes(depNodes);
+      setEdges(depEdges);
+    }
+  }, [viewMode, canShowDependencies, depNodes, depEdges, setNodes, setEdges]);
 
   // Filter Nodes by search
   useEffect(() => {
+    if (viewMode === 'api') return; // Don't filter in API mode
     setNodes((nds) =>
       nds.map((node) => {
         if (!searchQuery) {
@@ -94,7 +118,7 @@ function VisualProjectMapContent({ files, currentPath, detectedProject, onNaviga
         };
       })
     );
-  }, [searchQuery, setNodes]);
+  }, [searchQuery, setNodes, viewMode]);
 
   // Node click handlers
   const onNodeClick = useCallback(() => {}, []);
@@ -108,6 +132,40 @@ function VisualProjectMapContent({ files, currentPath, detectedProject, onNaviga
     }
   }, [onNavigate, onOpenFile]);
 
+  // API Mode: Render ApiExplorer instead of ReactFlow (full-screen, seamless)
+  if (viewMode === 'api') {
+    return (
+      <div className="w-full h-full bg-background relative">
+        {/* Compact Mode Toggle - top right */}
+        <div className="absolute top-4 right-4 z-20 flex items-center gap-2 p-2 bg-card/90 backdrop-blur-sm border border-border rounded-lg shadow-sm">
+          <button
+            onClick={() => setViewMode('structure')}
+            className="px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+          >
+            Structure
+          </button>
+          {canShowDependencies && (
+            <button
+              onClick={() => setViewMode('dependencies')}
+              className="px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            >
+              Deps
+            </button>
+          )}
+          <span className="px-2.5 py-1.5 text-xs font-medium bg-primary/10 text-primary rounded-md">
+            API
+          </span>
+        </div>
+        
+        {/* Full-screen ApiExplorer */}
+        <ApiExplorer 
+          currentPath={projectRootPath}
+          onOpenFile={onOpenFile}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full h-full bg-slate-50 dark:bg-slate-950 relative group">
       <VisualControls 
@@ -115,8 +173,8 @@ function VisualProjectMapContent({ files, currentPath, detectedProject, onNaviga
         setSearchQuery={setSearchQuery}
         detectedProject={detectedProject}
         canShowDependencies={!!canShowDependencies}
-        showDependencies={showDependencies}
-        setShowDependencies={setShowDependencies}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
       />
       {isLoadingDeps && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-background/80 backdrop-blur rounded-full shadow border border-border flex items-center gap-2">
@@ -156,3 +214,4 @@ export default function VisualProjectMap(props: VisualProjectMapProps) {
     </ReactFlowProvider>
   );
 }
+

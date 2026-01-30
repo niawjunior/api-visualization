@@ -271,6 +271,22 @@ app.on("ready", async () => {
       });
   });
 
+  // Analyze API Endpoints (AST-based)
+  ipcMain.handle('analyze-api-endpoints', async (event, rootPath: string) => {
+      if (!isPathAllowed(rootPath)) {
+          throw new Error('Access denied: Path outside allowed directory');
+      }
+
+      try {
+          const { analyzeApiEndpoints } = require('./tools/lib/analyzers/nextjs');
+          const endpoints = await analyzeApiEndpoints(rootPath);
+          return { success: true, endpoints };
+      } catch (error: any) {
+          console.error('API analysis error:', error);
+          return { success: false, error: error.message, endpoints: [] };
+      }
+  });
+
   // Detect Project (Worker Thread)
   ipcMain.handle('detect-project', async (event, rootPath: string) => {
       if (!isPathAllowed(rootPath)) {
@@ -296,6 +312,34 @@ app.on("ready", async () => {
               worker.terminate();
           });
           worker.postMessage({ type: 'detect-project', payload: { path: rootPath } });
+      });
+  });
+
+  // Analyze Route Schema (Worker Thread)
+  ipcMain.handle('analyze-route', async (event, filePath: string) => {
+      if (!isPathAllowed(filePath)) {
+          throw new Error('Access denied: Path outside allowed directory');
+      }
+
+      return new Promise((resolve, reject) => {
+          const { Worker } = require('worker_threads');
+          const workerPath = path.join(__dirname, 'tools/searchWorker.js');
+          const worker = new Worker(workerPath);
+          
+          worker.on('message', (msg: any) => {
+              if (msg.type === 'success') resolve(msg.results);
+              else {
+                  console.error('Route analysis error:', msg.error);
+                  resolve({ routes: [], errors: [msg.error] });
+              }
+              worker.terminate();
+          });
+          worker.on('error', (err: any) => {
+              console.error('Route analysis unexpected error:', err);
+              resolve({ routes: [], errors: [err.message] });
+              worker.terminate();
+          });
+          worker.postMessage({ type: 'analyze-route', payload: { path: filePath } });
       });
   });
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, Layout, GitFork, X, Hexagon } from 'lucide-react';
+import { Search, Layout, GitFork, X, Hexagon, Network } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DetectedProject, ProjectType } from '@/lib/types';
 
@@ -20,13 +20,15 @@ const projectTypeConfig: Record<ProjectType, ProjectTypeConfig> = {
   unknown: { icon: <Hexagon size={14} />, label: 'Folder', color: 'text-muted-foreground' },
 };
 
+export type ViewMode = 'structure' | 'dependencies' | 'api';
+
 interface VisualControlsProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   detectedProject: DetectedProject | null;
   canShowDependencies: boolean;
-  showDependencies: boolean;
-  setShowDependencies: (show: boolean) => void;
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
   className?: string;
 }
 
@@ -35,8 +37,8 @@ export function VisualControls({
   setSearchQuery,
   detectedProject,
   canShowDependencies,
-  showDependencies,
-  setShowDependencies,
+  viewMode,
+  setViewMode,
   className
 }: VisualControlsProps) {
   const config = projectTypeConfig[detectedProject?.type || 'unknown'];
@@ -71,12 +73,12 @@ export function VisualControls({
       <div className="h-px bg-border/50 my-1" />
 
       {/* Mode Toggle */}
-      <div className="flex bg-secondary/50 p-1 rounded-lg">
+      <div className="flex bg-secondary/50 p-1 rounded-lg gap-1">
         <button
-          onClick={() => setShowDependencies(false)}
+          onClick={() => setViewMode('structure')}
           className={cn(
-            "flex-1 flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-            !showDependencies 
+            "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium transition-all",
+            viewMode === 'structure'
               ? "bg-background text-foreground shadow-sm" 
               : "text-muted-foreground hover:text-foreground hover:bg-background/50"
           )}
@@ -86,17 +88,32 @@ export function VisualControls({
         </button>
         {canShowDependencies && (
           <button
-            onClick={() => setShowDependencies(true)}
+            onClick={() => setViewMode('dependencies')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-              showDependencies 
+              "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium transition-all",
+              viewMode === 'dependencies'
                 ? "bg-background text-foreground shadow-sm" 
                 : "text-muted-foreground hover:text-foreground hover:bg-background/50"
             )}
             title="View Import/Export Relationships"
           >
             <GitFork size={14} />
-            Dependencies
+            Deps
+          </button>
+        )}
+        {canShowDependencies && (
+          <button
+            onClick={() => setViewMode('api')}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium transition-all",
+              viewMode === 'api'
+                ? "bg-background text-foreground shadow-sm" 
+                : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+            )}
+            title="View API Endpoints"
+          >
+            <Network size={14} />
+            API
           </button>
         )}
       </div>

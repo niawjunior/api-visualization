@@ -65,6 +65,11 @@ worker_threads_1.parentPort?.on('message', async (task) => {
             const results = await detectProject(task.payload.path);
             worker_threads_1.parentPort?.postMessage({ type: 'success', results });
         }
+        else if (task.type === 'analyze-route') {
+            const { analyzeRouteFile } = await Promise.resolve().then(() => __importStar(require('./lib/analyzers/nextjs')));
+            const results = analyzeRouteFile(task.payload.path);
+            worker_threads_1.parentPort?.postMessage({ type: 'success', results });
+        }
     }
     catch (error) {
         worker_threads_1.parentPort?.postMessage({ type: 'error', error: error.message });

@@ -37,6 +37,8 @@ export function useDependencyGraph({ currentPath, enabled }: UseDependencyGraphO
       setNodes([]);
       setEdges([]);
 
+      console.log('[useDependencyGraph] Loading dependencies for:', currentPath);
+
       try {
         const { nodes: depNodes, edges: depEdges } = await window.electron.analyzeDependencies(currentPath);
 

@@ -21,3 +21,16 @@ export { analyzeDependencies, analyze } from './core';
 
 // Individual analyzers (for direct use if needed)
 export { nextjsAnalyzer, clearResolutionCache } from './nextjs';
+
+// Route analyzer
+export {
+    analyzeRouteFile,
+    analyzeApiEndpoints,
+    clearProgramCache,
+    type RouteSchema,
+    type RouteAnalysisResult,
+    type PropertySchema,
+    type ObjectSchema,
+    type ResponseSchema,
+    type ApiEndpoint
+} from './nextjs';

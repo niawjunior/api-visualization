@@ -285,6 +285,21 @@ electron_1.app.on("ready", async () => {
             worker.postMessage({ type: 'deps', payload: { path: rootPath } });
         });
     });
+    // Analyze API Endpoints (AST-based)
+    electron_1.ipcMain.handle('analyze-api-endpoints', async (event, rootPath) => {
+        if (!isPathAllowed(rootPath)) {
+            throw new Error('Access denied: Path outside allowed directory');
+        }
+        try {
+            const { analyzeApiEndpoints } = require('./tools/lib/analyzers/nextjs');
+            const endpoints = await analyzeApiEndpoints(rootPath);
+            return { success: true, endpoints };
+        }
+        catch (error) {
+            console.error('API analysis error:', error);
+            return { success: false, error: error.message, endpoints: [] };
+        }
+    });
     // Detect Project (Worker Thread)
     electron_1.ipcMain.handle('detect-project', async (event, rootPath) => {
         if (!isPathAllowed(rootPath)) {
@@ -309,6 +324,32 @@ electron_1.app.on("ready", async () => {
                 worker.terminate();
             });
             worker.postMessage({ type: 'detect-project', payload: { path: rootPath } });
+        });
+    });
+    // Analyze Route Schema (Worker Thread)
+    electron_1.ipcMain.handle('analyze-route', async (event, filePath) => {
+        if (!isPathAllowed(filePath)) {
+            throw new Error('Access denied: Path outside allowed directory');
+        }
+        return new Promise((resolve, reject) => {
+            const { Worker } = require('worker_threads');
+            const workerPath = path_1.default.join(__dirname, 'tools/searchWorker.js');
+            const worker = new Worker(workerPath);
+            worker.on('message', (msg) => {
+                if (msg.type === 'success')
+                    resolve(msg.results);
+                else {
+                    console.error('Route analysis error:', msg.error);
+                    resolve({ routes: [], errors: [msg.error] });
+                }
+                worker.terminate();
+            });
+            worker.on('error', (err) => {
+                console.error('Route analysis unexpected error:', err);
+                resolve({ routes: [], errors: [err.message] });
+                worker.terminate();
+            });
+            worker.postMessage({ type: 'analyze-route', payload: { path: filePath } });
         });
     });
     // File Watcher
