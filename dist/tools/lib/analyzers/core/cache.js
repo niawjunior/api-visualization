@@ -1,58 +1,75 @@
+"use strict";
 /**
  * Caching layer for AST analysis
  * Caches analysis results by file path and modification time
  */
-
-import * as fs from 'fs';
-import * as path from 'path';
-
-interface CacheEntry<T> {
-    mtime: number;      // File modification time
-    data: T;            // Cached analysis result
-    createdAt: number;  // When cache was created
-}
-
-interface CacheStats {
-    hits: number;
-    misses: number;
-    size: number;
-}
-
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.sourceFileCache = exports.routeCache = exports.dependencyCache = exports.AnalysisCache = void 0;
+exports.clearAllCaches = clearAllCaches;
+exports.getAllCacheStats = getAllCacheStats;
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
 /**
  * In-memory cache for analysis results
  * Invalidates automatically when file is modified
  */
-export class AnalysisCache<T = unknown> {
-    private cache: Map<string, CacheEntry<T>> = new Map();
-    private stats: CacheStats = { hits: 0, misses: 0, size: 0 };
-    private maxSize: number;
-    private ttlMs: number;
-    
-    constructor(options?: {
-        maxSize?: number;    // Max entries (default: 1000)
-        ttlMs?: number;      // Time-to-live in ms (default: 5 minutes)
-    }) {
+class AnalysisCache {
+    cache = new Map();
+    stats = { hits: 0, misses: 0, size: 0 };
+    maxSize;
+    ttlMs;
+    constructor(options) {
         this.maxSize = options?.maxSize ?? 1000;
         this.ttlMs = options?.ttlMs ?? 5 * 60 * 1000;
     }
-    
     /**
      * Get cached data if valid (file unchanged and TTL not expired)
      */
-    get(filePath: string): T | null {
+    get(filePath) {
         const entry = this.cache.get(filePath);
         if (!entry) {
             this.stats.misses++;
             return null;
         }
-        
         // Check TTL
         if (Date.now() - entry.createdAt > this.ttlMs) {
             this.cache.delete(filePath);
             this.stats.misses++;
             return null;
         }
-        
         // Check if file was modified
         try {
             const stat = fs.statSync(filePath);
@@ -61,26 +78,24 @@ export class AnalysisCache<T = unknown> {
                 this.stats.misses++;
                 return null;
             }
-        } catch {
+        }
+        catch {
             // File doesn't exist, invalidate cache
             this.cache.delete(filePath);
             this.stats.misses++;
             return null;
         }
-        
         this.stats.hits++;
         return entry.data;
     }
-    
     /**
      * Cache analysis result for a file
      */
-    set(filePath: string, data: T): void {
+    set(filePath, data) {
         // Evict oldest entries if at capacity
         if (this.cache.size >= this.maxSize) {
             this.evictOldest();
         }
-        
         try {
             const stat = fs.statSync(filePath);
             this.cache.set(filePath, {
@@ -89,23 +104,22 @@ export class AnalysisCache<T = unknown> {
                 createdAt: Date.now(),
             });
             this.stats.size = this.cache.size;
-        } catch {
+        }
+        catch {
             // Can't stat file, don't cache
         }
     }
-    
     /**
      * Invalidate cache for a specific file
      */
-    invalidate(filePath: string): void {
+    invalidate(filePath) {
         this.cache.delete(filePath);
         this.stats.size = this.cache.size;
     }
-    
     /**
      * Invalidate all entries matching a pattern
      */
-    invalidatePattern(pattern: RegExp): void {
+    invalidatePattern(pattern) {
         for (const key of this.cache.keys()) {
             if (pattern.test(key)) {
                 this.cache.delete(key);
@@ -113,11 +127,10 @@ export class AnalysisCache<T = unknown> {
         }
         this.stats.size = this.cache.size;
     }
-    
     /**
      * Invalidate all entries in a directory
      */
-    invalidateDirectory(dirPath: string): void {
+    invalidateDirectory(dirPath) {
         const normalizedDir = path.normalize(dirPath);
         for (const key of this.cache.keys()) {
             if (path.normalize(key).startsWith(normalizedDir)) {
@@ -126,30 +139,27 @@ export class AnalysisCache<T = unknown> {
         }
         this.stats.size = this.cache.size;
     }
-    
     /**
      * Clear all cached entries
      */
-    clear(): void {
+    clear() {
         this.cache.clear();
         this.stats = { hits: 0, misses: 0, size: 0 };
     }
-    
     /**
      * Get cache statistics
      */
-    getStats(): CacheStats & { hitRate: number } {
+    getStats() {
         const total = this.stats.hits + this.stats.misses;
         return {
             ...this.stats,
             hitRate: total > 0 ? this.stats.hits / total : 0,
         };
     }
-    
     /**
      * Evict oldest entries to make room
      */
-    private evictOldest(): void {
+    evictOldest() {
         // Simple FIFO eviction - remove first 10% of entries
         const toRemove = Math.max(1, Math.floor(this.maxSize * 0.1));
         const keys = Array.from(this.cache.keys()).slice(0, toRemove);
@@ -158,47 +168,31 @@ export class AnalysisCache<T = unknown> {
         }
     }
 }
-
+exports.AnalysisCache = AnalysisCache;
 // ============================================================================
 // Singleton caches for different analysis types
 // ============================================================================
-
 /** Cache for dependency analysis results */
-export const dependencyCache = new AnalysisCache<{
-    services: any[];
-    database: any[];
-    external: any[];
-    utilities: any[];
-    grouped: any[];
-    tables: string[];
-    apiCalls: string[];
-}>();
-
+exports.dependencyCache = new AnalysisCache();
 /** Cache for route analysis results */
-export const routeCache = new AnalysisCache<any>();
-
+exports.routeCache = new AnalysisCache();
 /** Cache for TypeScript source file AST */
-export const sourceFileCache = new AnalysisCache<{
-    parsed: boolean;
-    lastModified: number;
-}>();
-
+exports.sourceFileCache = new AnalysisCache();
 /**
  * Clear all analysis caches
  */
-export function clearAllCaches(): void {
-    dependencyCache.clear();
-    routeCache.clear();
-    sourceFileCache.clear();
+function clearAllCaches() {
+    exports.dependencyCache.clear();
+    exports.routeCache.clear();
+    exports.sourceFileCache.clear();
 }
-
 /**
  * Get combined cache statistics
  */
-export function getAllCacheStats(): Record<string, ReturnType<AnalysisCache['getStats']>> {
+function getAllCacheStats() {
     return {
-        dependency: dependencyCache.getStats(),
-        route: routeCache.getStats(),
-        sourceFile: sourceFileCache.getStats(),
+        dependency: exports.dependencyCache.getStats(),
+        route: exports.routeCache.getStats(),
+        sourceFile: exports.sourceFileCache.getStats(),
     };
 }

@@ -5,6 +5,7 @@
 import ts from 'typescript';
 import path from 'path';
 import type { ExtractionContext, ApiDependencies, DependencyInfo, GroupedDependency } from '../types';
+import { dependencyCache } from '../../core/cache';
 
 // Re-export types for convenience
 export type { ApiDependencies, DependencyInfo, GroupedDependency };
@@ -55,8 +56,18 @@ const EXTERNAL_CALL_PATTERNS = [
 export function extractApiDependencies(
     ctx: ExtractionContext,
     functionBody: ts.Block,
-    sourceFile: ts.SourceFile
+    sourceFile: ts.SourceFile,
+    useCache: boolean = true
 ): ApiDependencies {
+    // Check cache first
+    if (useCache && sourceFile.fileName) {
+        // We use sourceFile.fileName as the cache key
+        const cached = dependencyCache.get(sourceFile.fileName);
+        if (cached) {
+            return cached as ApiDependencies;
+        }
+    }
+
     const dependencies: ApiDependencies = {
         services: [],
         database: [],
@@ -82,6 +93,11 @@ export function extractApiDependencies(
     // 4. Deduplicate tables and apiCalls
     dependencies.tables = [...new Set(dependencies.tables)];
     dependencies.apiCalls = [...new Set(dependencies.apiCalls)];
+    
+    // Cache if enabled
+    if (useCache && sourceFile.fileName) {
+        dependencyCache.set(sourceFile.fileName, dependencies);
+    }
     
     return dependencies;
 }

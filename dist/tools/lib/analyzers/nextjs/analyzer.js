@@ -20,6 +20,7 @@ const request_1 = require("./extractors/request");
 const response_1 = require("./extractors/response");
 const params_1 = require("./extractors/params");
 const api_dependencies_1 = require("./extractors/api-dependencies");
+const cache_1 = require("../core/cache");
 // ============================================================================
 // Constants
 // ============================================================================
@@ -29,9 +30,21 @@ const HTTP_METHODS_SET = new Set(['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTI
 // ============================================================================
 /**
  * Analyze a single route file.
+ * Uses caching to skip re-analysis of unchanged files.
  */
-function analyzeRouteFile(filePath, projectRoot) {
+function analyzeRouteFile(filePath, projectRoot, useCache = true) {
     const result = { routes: [], errors: [] };
+    // Check cache first
+    if (useCache) {
+        const cached = cache_1.routeCache.get(filePath);
+        if (cached) {
+            // Convert cached data back to RouteAnalysisResult
+            return {
+                routes: cached,
+                errors: []
+            };
+        }
+    }
     try {
         const root = projectRoot || path_1.default.dirname(filePath);
         const program = (0, program_1.getOrCreateProgram)([filePath], root);
@@ -49,6 +62,10 @@ function analyzeRouteFile(filePath, projectRoot) {
                 result.routes.push(route);
             }
         });
+        // Cache the result if analysis succeeded
+        if (useCache && result.routes.length > 0) {
+            cache_1.routeCache.set(filePath, result.routes);
+        }
     }
     catch (error) {
         const message = error instanceof Error ? error.message : String(error);

@@ -9,6 +9,7 @@ exports.extractApiDependencies = extractApiDependencies;
  * Extracts service, database, external API, and utility dependencies from API routes.
  */
 const typescript_1 = __importDefault(require("typescript"));
+const cache_1 = require("../../core/cache");
 // ============================================================================
 // Pattern Definitions
 // ============================================================================
@@ -46,7 +47,15 @@ const EXTERNAL_CALL_PATTERNS = [
 /**
  * Extract dependencies from a function body.
  */
-function extractApiDependencies(ctx, functionBody, sourceFile) {
+function extractApiDependencies(ctx, functionBody, sourceFile, useCache = true) {
+    // Check cache first
+    if (useCache && sourceFile.fileName) {
+        // We use sourceFile.fileName as the cache key
+        const cached = cache_1.dependencyCache.get(sourceFile.fileName);
+        if (cached) {
+            return cached;
+        }
+    }
     const dependencies = {
         services: [],
         database: [],
@@ -67,6 +76,10 @@ function extractApiDependencies(ctx, functionBody, sourceFile) {
     // 4. Deduplicate tables and apiCalls
     dependencies.tables = [...new Set(dependencies.tables)];
     dependencies.apiCalls = [...new Set(dependencies.apiCalls)];
+    // Cache if enabled
+    if (useCache && sourceFile.fileName) {
+        cache_1.dependencyCache.set(sourceFile.fileName, dependencies);
+    }
     return dependencies;
 }
 // ============================================================================

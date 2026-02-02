@@ -22,6 +22,7 @@ import { extractRequestBody } from './extractors/request';
 import { extractResponses } from './extractors/response';
 import { extractQueryParams, extractRouteParamsFromFunction } from './extractors/params';
 import { extractApiDependencies } from './extractors/api-dependencies';
+import { routeCache, clearAllCaches, getAllCacheStats } from '../core/cache';
 
 // ============================================================================
 // Constants
@@ -35,9 +36,22 @@ const HTTP_METHODS_SET = new Set(['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTI
 
 /**
  * Analyze a single route file.
+ * Uses caching to skip re-analysis of unchanged files.
  */
-export function analyzeRouteFile(filePath: string, projectRoot?: string): RouteAnalysisResult {
+export function analyzeRouteFile(filePath: string, projectRoot?: string, useCache: boolean = true): RouteAnalysisResult {
     const result: RouteAnalysisResult = { routes: [], errors: [] };
+    
+    // Check cache first
+    if (useCache) {
+        const cached = routeCache.get(filePath);
+        if (cached) {
+            // Convert cached data back to RouteAnalysisResult
+            return { 
+                routes: cached as RouteSchema[], 
+                errors: [] 
+            };
+        }
+    }
     
     try {
         const root = projectRoot || path.dirname(filePath);
@@ -59,6 +73,11 @@ export function analyzeRouteFile(filePath: string, projectRoot?: string): RouteA
                 result.routes.push(route);
             }
         });
+        
+        // Cache the result if analysis succeeded
+        if (useCache && result.routes.length > 0) {
+            routeCache.set(filePath, result.routes as any);
+        }
         
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
