@@ -6,8 +6,11 @@
  *
  * @module analyzers/nextjs
  */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.findMethodLineNumber = exports.extractRouteParams = exports.filePathToRoutePath = exports.resolveExpressionType = exports.collectVariables = exports.extractPropertiesFromObjectLiteral = exports.extractPropertiesFromType = exports.typeToString = exports.clearRequestPatterns = exports.registerRequestPattern = exports.IGNORED_DIRS = exports.ROUTE_FILE_PATTERNS = exports.HTTP_METHODS = exports.clearProgramCache = exports.analyzeApiEndpoints = exports.analyzeRouteFile = exports.clearResolutionCache = exports.nextjsAnalyzer = void 0;
+exports.nextJsFrameworkAnalyzer = exports.findMethodLineNumber = exports.extractRouteParams = exports.filePathToRoutePath = exports.resolveExpressionType = exports.collectVariables = exports.extractPropertiesFromObjectLiteral = exports.extractPropertiesFromType = exports.typeToString = exports.clearRequestPatterns = exports.registerRequestPattern = exports.IGNORED_DIRS = exports.ROUTE_FILE_PATTERNS = exports.HTTP_METHODS = exports.clearProgramCache = exports.analyzeApiEndpoints = exports.analyzeRouteFile = exports.clearResolutionCache = exports.nextjsAnalyzer = void 0;
 // Dependency Analyzer (for backward compatibility with analyzer registry)
 var dependency_analyzer_1 = require("./dependency-analyzer");
 Object.defineProperty(exports, "nextjsAnalyzer", { enumerable: true, get: function () { return dependency_analyzer_1.nextjsAnalyzer; } });
@@ -27,6 +30,7 @@ var request_1 = require("./extractors/request");
 Object.defineProperty(exports, "registerRequestPattern", { enumerable: true, get: function () { return request_1.registerRequestPattern; } });
 Object.defineProperty(exports, "clearRequestPatterns", { enumerable: true, get: function () { return request_1.clearRequestPatterns; } });
 // Utilities (for custom patterns)
+// Utilities (for custom patterns)
 var type_utils_1 = require("./utils/type-utils");
 Object.defineProperty(exports, "typeToString", { enumerable: true, get: function () { return type_utils_1.typeToString; } });
 Object.defineProperty(exports, "extractPropertiesFromType", { enumerable: true, get: function () { return type_utils_1.extractPropertiesFromType; } });
@@ -37,3 +41,25 @@ var path_utils_1 = require("./utils/path-utils");
 Object.defineProperty(exports, "filePathToRoutePath", { enumerable: true, get: function () { return path_utils_1.filePathToRoutePath; } });
 Object.defineProperty(exports, "extractRouteParams", { enumerable: true, get: function () { return path_utils_1.extractRouteParams; } });
 Object.defineProperty(exports, "findMethodLineNumber", { enumerable: true, get: function () { return path_utils_1.findMethodLineNumber; } });
+// Framework Analyzer Implementation
+const analyzer_2 = require("./analyzer");
+const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
+exports.nextJsFrameworkAnalyzer = {
+    name: 'nextjs',
+    detect: async (projectPath, config) => {
+        // Simple detection: check for next.config.js or usage of next dependency
+        // We can check package.json too, but file existence is fast
+        const hasConfig = fs_1.default.existsSync(path_1.default.join(projectPath, 'next.config.js')) ||
+            fs_1.default.existsSync(path_1.default.join(projectPath, 'next.config.mjs')) ||
+            fs_1.default.existsSync(path_1.default.join(projectPath, 'next.config.ts'));
+        if (hasConfig)
+            return true;
+        // Fallback: check directories
+        return fs_1.default.existsSync(path_1.default.join(projectPath, 'pages/api')) ||
+            fs_1.default.existsSync(path_1.default.join(projectPath, 'app'));
+    },
+    analyze: async (projectPath, config) => {
+        return (0, analyzer_2.analyzeApiEndpoints)(projectPath, config);
+    }
+};

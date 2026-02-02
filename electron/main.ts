@@ -278,8 +278,8 @@ app.on("ready", async () => {
       }
 
       try {
-          const { analyzeApiEndpoints } = require('./tools/lib/analyzers/nextjs');
-          const endpoints = await analyzeApiEndpoints(rootPath);
+          const { analyzeProject } = require('./tools/lib/analyzers');
+          const endpoints = await analyzeProject(rootPath);
           return { success: true, endpoints };
       } catch (error: any) {
           console.error('API analysis error:', error);

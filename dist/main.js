@@ -291,8 +291,8 @@ electron_1.app.on("ready", async () => {
             throw new Error('Access denied: Path outside allowed directory');
         }
         try {
-            const { analyzeApiEndpoints } = require('./tools/lib/analyzers/nextjs');
-            const endpoints = await analyzeApiEndpoints(rootPath);
+            const { analyzeProject } = require('./tools/lib/analyzers');
+            const endpoints = await analyzeProject(rootPath);
             return { success: true, endpoints };
         }
         catch (error) {

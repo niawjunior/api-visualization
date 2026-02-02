@@ -11,8 +11,11 @@ import ReactFlow, {
   ReactFlowProvider,
   NodeTypes,
   SelectionMode,
+  useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+
+
 
 import FolderNode from './nodes/FolderNode';
 import FileNode from './nodes/FileNode';
@@ -132,6 +135,8 @@ function VisualProjectMapContent({ files, currentPath, detectedProject, onNaviga
     }
   }, [onNavigate, onOpenFile]);
 
+  const { setCenter } = useReactFlow(); // Hook for navigation
+
   // API Mode: Render ApiExplorer instead of ReactFlow (full-screen, seamless)
   if (viewMode === 'api') {
     return (
@@ -191,16 +196,24 @@ function VisualProjectMapContent({ files, currentPath, detectedProject, onNaviga
         onNodeClick={onNodeClick}
         onNodeDoubleClick={onNodeDoubleClick}
         fitView
-        attributionPosition="bottom-right"
+        attributionPosition="bottom-left"
         selectionMode={SelectionMode.Partial}
         minZoom={0.1}
       >
         <Background gap={20} size={1} color="#94a3b8" />
-        <Controls className="bg-white dark:bg-slate-900 border-border fill-foreground text-foreground shadow-sm" />
+        <Controls position="top-left" className="bg-white dark:bg-slate-900 border-border fill-foreground text-foreground shadow-sm mt-4 ml-4" />
         <MiniMap 
+          zoomable
           nodeColor={(node) => node.type === 'folder' ? '#3b82f6' : '#cbd5e1'}
           className="!bg-white dark:!bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-md" 
           maskColor="rgba(0, 0, 0, 0.1)"
+          style={{ pointerEvents: 'all', zIndex: 100, cursor: 'pointer' }}
+          onClick={(_, target) => {
+              setCenter(target.x, target.y, { duration: 800, zoom: 1.2 });
+          }}
+          onNodeClick={(_, node) => {
+              setCenter(node.position.x, node.position.y, { duration: 800, zoom: 1.2 });
+          }}
         />
       </ReactFlow>
     </div>

@@ -13,6 +13,9 @@ import ReactFlow, {
   MarkerType,
   Position,
   Handle,
+  useStore,
+  ReactFlowState,
+  useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -91,7 +94,7 @@ const CATEGORY_CONFIG = {
 };
 
 // ============================================================================
-// Grouped Dependency Node (Collapsible)
+// Grouped Dependency Node (Collapsible with LOD)
 // ============================================================================
 
 function GroupedDependencyNode({ data }: { 
@@ -103,15 +106,23 @@ function GroupedDependencyNode({ data }: {
     count: number;
   } 
 }) {
-  const [expanded, setExpanded] = useState(false);
+  // Optimization: Subscribe only to zoom changes for LOD
+  const zoom = useStore((s: ReactFlowState) => s.transform[2]);
+  const showDetails = zoom > 0.65; // Show functions only when zoomed in
+  
   const config = CATEGORY_CONFIG[data.type as keyof typeof CATEGORY_CONFIG];
   const Icon = config?.icon || Layers;
+  
+  // Truncate very long lists for performance
+  const MAX_VISIBLE_ITEMS = 12;
+  const visibleItems = data.items.slice(0, MAX_VISIBLE_ITEMS);
+  const remainingCount = data.items.length - MAX_VISIBLE_ITEMS;
   
   return (
     <div 
       className={cn(
         'rounded-lg border-2 shadow-lg min-w-[180px] overflow-hidden',
-        'bg-card/95 backdrop-blur-sm transition-all',
+        'bg-card/95 backdrop-blur-sm transition-all duration-300', // Smother zoom transition
         config?.borderColor || 'border-border'
       )}
       style={{ borderColor: config?.color }}
@@ -150,11 +161,11 @@ function GroupedDependencyNode({ data }: {
         </div>
       </div>
       
-      {/* Function names - always visible */}
-      {data.items.length > 0 && (
+      {/* Function names - LOD: Only visible when zoomed in */}
+      {showDetails && data.items.length > 0 && (
         <div className="border-t border-border/50 px-4 py-2 bg-muted/30">
           <div className="flex flex-wrap gap-1">
-            {data.items.map((item, i) => (
+            {visibleItems.map((item, i) => (
               <span 
                 key={i} 
                 className="px-1.5 py-0.5 text-[10px] font-mono rounded"
@@ -163,6 +174,13 @@ function GroupedDependencyNode({ data }: {
                 {item}
               </span>
             ))}
+            {remainingCount > 0 && (
+               <span 
+                className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-muted text-muted-foreground"
+              >
+                +{remainingCount} more
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -441,6 +459,8 @@ function ApiDependencyGraphContent({ endpoint, allEndpoints = [], onClose, onOpe
     }
   }, []);
   
+  const { setCenter } = useReactFlow();
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -524,19 +544,29 @@ function ApiDependencyGraphContent({ endpoint, allEndpoints = [], onClose, onOpe
             onNodeClick={onNodeClick}
             nodeTypes={nodeTypes}
             fitView
-            attributionPosition="bottom-right"
+            attributionPosition="bottom-left"
             minZoom={0.3}
             maxZoom={1.5}
           >
             <Background gap={24} size={1} color="#94a3b8" />
-            <Controls className="bg-card border-border shadow-lg" />
+            <Controls position="top-left" className="bg-card border-border shadow-lg mt-24" />
             <MiniMap 
+              zoomable
+              ariaLabel="API Dependency MiniMap"
+              maskColor="rgba(0, 0, 0, 0.1)"
               nodeColor={(node) => {
                 if (node.type === 'api') return '#3b82f6';
                 const type = node.data?.type as keyof typeof CATEGORY_CONFIG;
                 return CATEGORY_CONFIG[type]?.color || '#94a3b8';
               }}
+              style={{ pointerEvents: 'all', zIndex: 100, cursor: 'pointer' }}
               className="!bg-card border border-border rounded-lg shadow-lg"
+              onClick={(_, target) => {
+                  setCenter(target.x, target.y, { duration: 800, zoom: 1.2 });
+              }}
+              onNodeClick={(_, node) => {
+                  setCenter(node.position.x, node.position.y, { duration: 800, zoom: 1.2 });
+              }}
             />
           </ReactFlow>
         ) : (

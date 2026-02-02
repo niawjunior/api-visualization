@@ -170,23 +170,30 @@ function hasExportModifier(node: ts.Node): boolean {
 /**
  * Analyze all API routes in a project.
  */
-export async function analyzeApiEndpoints(projectPath: string): Promise<ApiEndpoint[]> {
+export async function analyzeApiEndpoints(
+    projectPath: string, 
+    existingConfig?: ApiVizConfig
+): Promise<ApiEndpoint[]> {
     const endpoints: ApiEndpoint[] = [];
     
-    // Load config
-    const configResult = loadConfig(projectPath);
-    const config = configResult.ok ? configResult.value : DEFAULT_CONFIG;
+    // Load config if not provided
+    let config = existingConfig;
+    if (!config) {
+        const configResult = loadConfig(projectPath);
+        config = configResult.ok ? configResult.value : DEFAULT_CONFIG;
+    }
     
     // Convert relative patterns to absolute globs if needed, or rely on cwd
     // But config.include are globs relative to project root
     
     const routeFiles: string[] = [];
+    const includePatterns = config.include || DEFAULT_CONFIG.include || [];
     
-    for (const pattern of config.include) {
+    for (const pattern of includePatterns) {
         const matches = await glob(pattern, {
             cwd: projectPath,
             absolute: true,
-            ignore: config.exclude,
+            ignore: config.exclude || DEFAULT_CONFIG.exclude,
         });
         routeFiles.push(...matches);
     }
@@ -202,8 +209,10 @@ export async function analyzeApiEndpoints(projectPath: string): Promise<ApiEndpo
     const program = getOrCreateProgram(routeFiles, projectPath);
     
     // Analyze each file
+    const useAnalysisCache = config.analysis?.cache ?? DEFAULT_CONFIG.analysis?.cache ?? true;
+
     for (const filePath of routeFiles) {
-        const result = analyzeRouteFile(filePath, projectPath, config.analysis.cache, config);
+        const result = analyzeRouteFile(filePath, projectPath, useAnalysisCache, config);
         
         for (const route of result.routes) {
             // Group routes by path
