@@ -5,11 +5,13 @@
 
 import { apiAnalyzerRegistry } from './core/registry';
 import { nextJsFrameworkAnalyzer } from './nextjs';
+import { pythonFrameworkAnalyzer } from './python';
 import { loadConfig, DEFAULT_CONFIG } from './core/config';
 import { ApiEndpoint } from './core/api-types';
 
 // Register built-in analyzers
 apiAnalyzerRegistry.register(nextJsFrameworkAnalyzer);
+apiAnalyzerRegistry.register(pythonFrameworkAnalyzer);
 
 // Core types & exports
 export * from './core/api-types';

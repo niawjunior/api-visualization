@@ -55,9 +55,20 @@ exports.nextJsFrameworkAnalyzer = {
             fs_1.default.existsSync(path_1.default.join(projectPath, 'next.config.ts'));
         if (hasConfig)
             return true;
-        // Fallback: check directories
-        return fs_1.default.existsSync(path_1.default.join(projectPath, 'pages/api')) ||
-            fs_1.default.existsSync(path_1.default.join(projectPath, 'app'));
+        // Check package.json for next dependency
+        const packageJsonPath = path_1.default.join(projectPath, 'package.json');
+        if (fs_1.default.existsSync(packageJsonPath)) {
+            try {
+                const pkg = JSON.parse(fs_1.default.readFileSync(packageJsonPath, 'utf-8'));
+                const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+                if (deps['next'])
+                    return true;
+            }
+            catch (e) {
+                // Ignore parse errors
+            }
+        }
+        return false;
     },
     analyze: async (projectPath, config) => {
         return (0, analyzer_2.analyzeApiEndpoints)(projectPath, config);

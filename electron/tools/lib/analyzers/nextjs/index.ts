@@ -76,10 +76,20 @@ export const nextJsFrameworkAnalyzer: ApiAnalyzer = {
                           fs.existsSync(path.join(projectPath, 'next.config.ts'));
         
         if (hasConfig) return true;
+
+        // Check package.json for next dependency
+        const packageJsonPath = path.join(projectPath, 'package.json');
+        if (fs.existsSync(packageJsonPath)) {
+            try {
+                const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+                const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+                if (deps['next']) return true;
+            } catch (e) {
+                // Ignore parse errors
+            }
+        }
         
-        // Fallback: check directories
-        return fs.existsSync(path.join(projectPath, 'pages/api')) || 
-               fs.existsSync(path.join(projectPath, 'app'));
+        return false;
     },
     analyze: async (projectPath: string, config: ApiVizConfig) => {
         return analyzeApiEndpoints(projectPath, config);

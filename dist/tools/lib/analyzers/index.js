@@ -22,9 +22,11 @@ exports.clearProgramCache = exports.analyzeApiEndpoints = exports.analyzeRouteFi
 exports.analyzeProject = analyzeProject;
 const registry_1 = require("./core/registry");
 const nextjs_1 = require("./nextjs");
+const python_1 = require("./python");
 const config_1 = require("./core/config");
 // Register built-in analyzers
 registry_1.apiAnalyzerRegistry.register(nextjs_1.nextJsFrameworkAnalyzer);
+registry_1.apiAnalyzerRegistry.register(python_1.pythonFrameworkAnalyzer);
 // Core types & exports
 __exportStar(require("./core/api-types"), exports);
 __exportStar(require("./core/analyzer"), exports);

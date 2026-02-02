@@ -243,7 +243,7 @@ export function ApiExplorer({ currentPath, onOpenFile }: ApiExplorerProps) {
                                         const globalIndex = filteredEndpoints.indexOf(ep);
                                         return (
                                             <ApiEndpointCard
-                                                key={ep.filePath + ep.path}
+                                                key={ep.filePath + ep.path + '-' + ep.methods.join('-')}
                                                 endpoint={ep}
                                                 isExpanded={expandedIndex === globalIndex}
                                                 onToggle={() => setExpandedIndex(expandedIndex === globalIndex ? null : globalIndex)}
