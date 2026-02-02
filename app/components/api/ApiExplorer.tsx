@@ -12,7 +12,7 @@ import ApiDependencyGraph from './ApiDependencyGraph';
 
 interface ApiExplorerProps {
     currentPath: string;
-    onOpenFile?: (path: string) => void;
+    onOpenFile?: (path: string, line?: number, app?: 'antigravity' | 'vscode' | 'cursor' | 'system') => void;
 }
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';

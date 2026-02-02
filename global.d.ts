@@ -66,7 +66,7 @@ declare global {
       getDesktopPath: () => Promise<string>;
       watchDirectory: (path: string) => Promise<void>;
       onDirectoryChanged: (callback: (path: string) => void) => void;
-      openPath: (path: string) => Promise<void>;
+      openPath: (path: string, line?: number, app?: 'antigravity' | 'vscode' | 'cursor' | 'system') => Promise<void>;
       showItemInFolder: (path: string) => Promise<void>;
       readTextFile: (path: string) => Promise<string>;
       readImageAsBase64: (path: string) => Promise<string>;

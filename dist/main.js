@@ -38,6 +38,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
 const path_1 = __importDefault(require("path"));
+const child_process_1 = require("child_process");
 const dotenv = __importStar(require("dotenv"));
 const os_1 = __importDefault(require("os"));
 // Explicitly load .env from the project root or resources
@@ -98,10 +99,71 @@ electron_1.app.on("ready", async () => {
         const path = require('path');
         return path.join(os.homedir(), 'Desktop');
     });
-    electron_1.ipcMain.handle('open-path', async (event, targetPath) => {
+    electron_1.ipcMain.handle('open-path', async (event, targetPath, line, appName) => {
         if (!isPathAllowed(targetPath)) {
             throw new Error('Access denied: Path outside allowed directory');
         }
+        // Helper to open specific editor
+        const openInEditor = (cmd) => {
+            try {
+                const fs = require('fs');
+                const name = cmd[0];
+                // Check common locations
+                const commonPaths = [
+                    `/usr/local/bin/${name}`,
+                    `/opt/homebrew/bin/${name}`,
+                    `/usr/bin/${name}`,
+                    // Add Cursor specific paths if known, usually just 'cursor' linked
+                ];
+                let fullPath = null;
+                for (const p of commonPaths) {
+                    if (fs.existsSync(p)) {
+                        fullPath = p;
+                        break;
+                    }
+                }
+                if (fullPath) {
+                    (0, child_process_1.spawn)(fullPath, cmd.slice(1).concat(['-g', `${targetPath}:${line || 1}`]), { detached: true, stdio: 'ignore' });
+                    return true;
+                }
+                return false;
+            }
+            catch (e) {
+                return false;
+            }
+        };
+        if (appName === 'vscode') {
+            if (openInEditor(['code']))
+                return { success: true };
+            // Fallback to macOS open if linux path check fails
+            if (process.platform === 'darwin') {
+                (0, child_process_1.spawn)('open', ['-a', 'Visual Studio Code', '--args', '-g', `${targetPath}:${line || 1}`]);
+                return { success: true };
+            }
+        }
+        if (appName === 'cursor') {
+            if (openInEditor(['cursor']))
+                return { success: true };
+            // Fallback
+            if (process.platform === 'darwin') {
+                (0, child_process_1.spawn)('open', ['-a', 'Cursor', '--args', '-g', `${targetPath}:${line || 1}`]);
+                return { success: true };
+            }
+        }
+        // Auto-detection logic (if appName not specified but line provided)
+        if (line !== undefined && line !== null && !appName) {
+            // Default priority: Cursor -> VS Code -> System
+            if (openInEditor(['cursor']))
+                return { success: true };
+            if (openInEditor(['code']))
+                return { success: true };
+            if (process.platform === 'darwin') {
+                // Try opening VS Code blindly
+                (0, child_process_1.spawn)('open', ['-a', 'Visual Studio Code', '--args', '-g', `${targetPath}:${line}`]);
+            }
+            // Proceed to fallback
+        }
+        // Default fallback (System Default)
         return await electron_1.shell.openPath(targetPath);
     });
     electron_1.ipcMain.handle('show-item-in-folder', async (event, targetPath) => {

@@ -7,6 +7,7 @@ import { useFileSync } from './hooks/useFileSync';
 import { useProjectDetection } from './hooks/useProjectDetection';
 import { HeaderControls } from './HeaderControls';
 import VisualProjectMap from './visual/VisualProjectMap';
+import { CodeViewerModal } from './visual/CodeViewerModal';
 
 export default function MainInterface() {
   const [showExplorer, setShowExplorer] = useState(true);
@@ -76,7 +77,10 @@ export default function MainInterface() {
                 currentPath={currentPath}
                 detectedProject={detectedProject}
                 onNavigate={handleNavigate}
-                onOpenFile={(path) => window.electron?.openPath(path)}
+                onOpenFile={(path: string, line?: number, app?: 'antigravity' | 'vscode' | 'cursor' | 'system') => {
+                    // Always open externally
+                    window.electron?.openPath(path, line, app);
+                }}
             />
         </div>
       </div>

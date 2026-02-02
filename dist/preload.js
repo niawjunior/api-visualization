@@ -8,7 +8,7 @@ contextBridge.exposeInMainWorld("electron", {
         ipcRenderer.removeAllListeners('directory-changed');
         ipcRenderer.on('directory-changed', (event, path) => callback(path));
     },
-    openPath: (path) => ipcRenderer.invoke("open-path", path),
+    openPath: (path, line, app) => ipcRenderer.invoke("open-path", path, line, app),
     showItemInFolder: (path) => ipcRenderer.invoke('show-item-in-folder', path),
     readTextFile: (path) => ipcRenderer.invoke('read-text-file', path),
     readImageAsBase64: (path) => ipcRenderer.invoke('read-image-as-base64', path),

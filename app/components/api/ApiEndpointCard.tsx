@@ -1,10 +1,106 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronRight, Copy, Check, FileCode, ExternalLink, GitBranch } from 'lucide-react';
+import { ChevronDown, ChevronRight, Copy, Check, FileCode, ExternalLink, GitBranch, Monitor, Code } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ApiMethodBadge } from './ApiMethodBadge';
+
+import { createPortal } from 'react-dom';
+
+import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
+
+// Editor Selector Component
+interface EditorSelectorProps {
+    path: string;
+    line: number;
+    relativePath: string;
+    onOpen?: (path: string, line?: number, app?: 'antigravity' | 'vscode' | 'cursor' | 'system') => void;
+}
+
+function EditorSelector({ 
+    path, 
+    line, 
+    relativePath, 
+    onOpen 
+}: EditorSelectorProps) {
+    const [defaultApp, setDefaultApp] = useState<'antigravity' | 'vscode' | 'cursor' | 'system' | null>(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('antigravity_editor_pref') as any || 'antigravity';
+        }
+        return 'antigravity';
+    });
+
+    const handleOpen = (app: 'antigravity' | 'vscode' | 'cursor' | 'system') => {
+        onOpen?.(path, line, app);
+        localStorage.setItem('antigravity_editor_pref', app);
+        setDefaultApp(app);
+    };
+
+    return (
+        <DropdownMenuPrimitive.Root>
+            <DropdownMenuPrimitive.Trigger asChild>
+                <button
+                    className="flex items-center gap-2 px-3 py-1.5 bg-muted hover:bg-muted/80 rounded-md transition-colors text-xs border border-border/50 outline-none focus:ring-1 focus:ring-primary/20"
+                    title="Click to select editor"
+                >
+                     {/* Icon based on defaultApp */}
+                    {defaultApp === 'vscode' ? <Code className="w-3.5 h-3.5 text-blue-500" /> :
+                     defaultApp === 'cursor' ? <FileCode className="w-3.5 h-3.5 text-foreground" /> :
+                     defaultApp === 'antigravity' ? <div className="w-3.5 h-3.5 bg-primary rounded-full" /> :
+                     <Monitor className="w-3.5 h-3.5 text-muted-foreground" />}
+                     
+                    <span className="truncate max-w-[150px]">{relativePath}</span>
+                    <ChevronDown className="w-3 h-3 opacity-50" />
+                </button>
+            </DropdownMenuPrimitive.Trigger>
+
+            <DropdownMenuPrimitive.Portal>
+                <DropdownMenuPrimitive.Content 
+                    align="start"
+                    sideOffset={4}
+                    className="z-[9999] min-w-[200px] overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+                >
+                    <DropdownMenuPrimitive.Item 
+                        onSelect={() => handleOpen('antigravity')}
+                        className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                    >
+                        <div className="w-3 h-3 bg-primary rounded-full mr-2" />
+                        Antigravity
+                        {defaultApp === 'antigravity' && <span className="ml-auto text-[10px] opacity-50">(Default)</span>}
+                    </DropdownMenuPrimitive.Item>
+                    
+                    <DropdownMenuPrimitive.Item
+                        onSelect={() => handleOpen('vscode')}
+                        className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                    >
+                        <Code className="w-3 h-3 text-blue-500 mr-2" />
+                        VS Code
+                        {defaultApp === 'vscode' && <span className="ml-auto text-[10px] opacity-50">(Default)</span>}
+                    </DropdownMenuPrimitive.Item>
+                    
+                    <DropdownMenuPrimitive.Item
+                        onSelect={() => handleOpen('cursor')}
+                        className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                    >
+                        <FileCode className="w-3 h-3 text-foreground mr-2" />
+                        Cursor
+                        {defaultApp === 'cursor' && <span className="ml-auto text-[10px] opacity-50">(Default)</span>}
+                    </DropdownMenuPrimitive.Item>
+                    
+                    <DropdownMenuPrimitive.Item
+                        onSelect={() => handleOpen('system')}
+                        className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                    >
+                        <Monitor className="w-3 h-3 text-muted-foreground mr-2" />
+                        System Default
+                        {defaultApp === 'system' && <span className="ml-auto text-[10px] opacity-50">(Default)</span>}
+                    </DropdownMenuPrimitive.Item>
+                </DropdownMenuPrimitive.Content>
+            </DropdownMenuPrimitive.Portal>
+        </DropdownMenuPrimitive.Root>
+    );
+}
 
 interface SchemaField {
     name: string;
@@ -33,7 +129,7 @@ interface ApiEndpointCardProps {
     };
     isExpanded?: boolean;
     onToggle?: () => void;
-    onOpenFile?: (path: string) => void;
+    onOpenFile?: (path: string, line?: number, app?: 'antigravity' | 'vscode' | 'cursor' | 'system') => void;
     onViewDependencies?: () => void;
 }
 
@@ -132,13 +228,12 @@ export function ApiEndpointCard({ endpoint, isExpanded, onToggle, onOpenFile, on
                                     {copied ? 'Copied!' : 'Copy cURL'}
                                 </button>
                                 
-                                <button
-                                    onClick={() => onOpenFile?.(endpoint.filePath)}
-                                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-muted hover:bg-muted/80 rounded-md transition-colors"
-                                >
-                                    <FileCode className="w-3 h-3" />
-                                    {endpoint.relativePath}
-                                </button>
+                                    <EditorSelector 
+                                        path={endpoint.filePath} 
+                                        line={endpoint.lineNumber} 
+                                        relativePath={endpoint.relativePath}
+                                        onOpen={onOpenFile} 
+                                    />
                                 
                                 {onViewDependencies && (
                                     <button
