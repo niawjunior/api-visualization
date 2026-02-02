@@ -37,15 +37,20 @@ interface ApiDependencies {
   external: any[];
   utilities: any[];
   grouped?: GroupedDependency[];
+  tables?: string[];
+  apiCalls?: string[];
+}
+
+interface EndpointSummary {
+  path: string;
+  methods: string[];
+  filePath?: string;
+  dependencies?: ApiDependencies;
 }
 
 interface ApiDependencyGraphProps {
-  endpoint: {
-    path: string;
-    methods: string[];
-    filePath?: string;
-    dependencies?: ApiDependencies;
-  };
+  endpoint: EndpointSummary;
+  allEndpoints?: EndpointSummary[];  // For cross-referencing shared dependencies
   onClose: () => void;
   onOpenFile?: (path: string) => void;
 }
@@ -292,7 +297,7 @@ function buildGraph(endpoint: ApiDependencyGraphProps['endpoint']): { nodes: Nod
 // Main Component
 // ============================================================================
 
-function ApiDependencyGraphContent({ endpoint, onClose, onOpenFile }: ApiDependencyGraphProps) {
+function ApiDependencyGraphContent({ endpoint, allEndpoints = [], onClose, onOpenFile }: ApiDependencyGraphProps) {
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
     () => buildGraph(endpoint),
     [endpoint]
@@ -300,6 +305,7 @@ function ApiDependencyGraphContent({ endpoint, onClose, onOpenFile }: ApiDepende
   
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [selectedModule, setSelectedModule] = useState<string | null>(null);
   
   const deps = endpoint.dependencies;
   const grouped = deps?.grouped || [];
@@ -315,6 +321,25 @@ function ApiDependencyGraphContent({ endpoint, onClose, onOpenFile }: ApiDepende
     });
     return counts;
   }, [grouped]);
+  
+  // Find endpoints that share the selected module
+  const sharedEndpoints = useMemo(() => {
+    if (!selectedModule) return [];
+    
+    return allEndpoints.filter(ep => {
+      if (ep.path === endpoint.path) return false; // Exclude current endpoint
+      const epGrouped = ep.dependencies?.grouped || [];
+      return epGrouped.some(g => g.module === selectedModule);
+    });
+  }, [selectedModule, allEndpoints, endpoint.path]);
+  
+  // Handle node click to show shared dependencies
+  const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+    if (node.type === 'dependency') {
+      const module = node.data?.module || null;
+      setSelectedModule(prev => prev === module ? null : module);
+    }
+  }, []);
   
   return (
     <motion.div
@@ -366,16 +391,55 @@ function ApiDependencyGraphContent({ endpoint, onClose, onOpenFile }: ApiDepende
             );
           })}
         </div>
+        
+        {/* Tables and API Calls */}
+        {((deps?.tables && deps.tables.length > 0) || (deps?.apiCalls && deps.apiCalls.length > 0)) && (
+          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border/50">
+            {deps?.tables && deps.tables.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-emerald-500" />
+                <span className="text-sm font-medium">Tables:</span>
+                <div className="flex gap-1 flex-wrap">
+                  {deps.tables.map((table, i) => (
+                    <span 
+                      key={i}
+                      className="px-2 py-0.5 text-xs bg-emerald-500/10 text-emerald-600 rounded"
+                    >
+                      {table}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {deps?.apiCalls && deps.apiCalls.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-amber-500" />
+                <span className="text-sm font-medium">API Calls:</span>
+                <div className="flex gap-1 flex-wrap">
+                  {deps.apiCalls.map((api, i) => (
+                    <span 
+                      key={i}
+                      className="px-2 py-0.5 text-xs bg-amber-500/10 text-amber-600 rounded font-mono"
+                    >
+                      {api}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       
       {/* Graph */}
-      <div className="w-full h-full pt-24">
+      <div className={cn("w-full h-full pt-24", selectedModule && "pr-80")}>
         {hasDependencies ? (
           <ReactFlow
             nodes={nodes}
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
+            onNodeClick={onNodeClick}
             nodeTypes={nodeTypes}
             fitView
             attributionPosition="bottom-right"
@@ -403,6 +467,75 @@ function ApiDependencyGraphContent({ endpoint, onClose, onOpenFile }: ApiDepende
           </div>
         )}
       </div>
+      
+      {/* Shared Dependencies Sidebar */}
+      <AnimatePresence>
+        {selectedModule && (
+          <motion.div
+            initial={{ x: 320, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 320, opacity: 0 }}
+            className="absolute top-0 right-0 w-80 h-full bg-card border-l border-border shadow-2xl z-20 pt-24 overflow-hidden flex flex-col"
+          >
+            <div className="p-4 border-b border-border flex-shrink-0">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-sm">Shared Dependencies</h3>
+                <button
+                  onClick={() => setSelectedModule(null)}
+                  className="p-1 hover:bg-muted rounded transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <code className="text-xs px-2 py-1 bg-muted rounded block truncate">
+                {selectedModule}
+              </code>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4">
+              {sharedEndpoints.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground mb-3">
+                    {sharedEndpoints.length} other endpoint{sharedEndpoints.length > 1 ? 's' : ''} using this dependency:
+                  </p>
+                  {sharedEndpoints.map((ep, index) => (
+                    <button
+                      key={index}
+                      onClick={() => onOpenFile?.(ep.filePath || '')}
+                      className="w-full text-left p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                    >
+                      <div className="flex items-center gap-1 mb-1">
+                        {ep.methods.slice(0, 3).map(method => (
+                          <span 
+                            key={method}
+                            className={cn(
+                              'px-1.5 py-0.5 text-[10px] font-bold rounded',
+                              method === 'GET' && 'bg-green-500/20 text-green-600',
+                              method === 'POST' && 'bg-blue-500/20 text-blue-600',
+                              method === 'PUT' && 'bg-amber-500/20 text-amber-600',
+                              method === 'DELETE' && 'bg-red-500/20 text-red-600',
+                              method === 'PATCH' && 'bg-purple-500/20 text-purple-600',
+                            )}
+                          >
+                            {method}
+                          </span>
+                        ))}
+                      </div>
+                      <span className="font-mono text-xs text-foreground">{ep.path}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground py-8">
+                  <Layers className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No other endpoints</p>
+                  <p className="text-xs mt-1">This is the only API using this dependency.</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

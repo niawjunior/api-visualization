@@ -42,6 +42,8 @@ export interface ApiDependencies {
     external: DependencyInfo[];     // fetch URLs, axios calls
     utilities: DependencyInfo[];    // shared helpers
     grouped: GroupedDependency[];   // Grouped by module for UI display
+    tables: string[];               // Database tables accessed (e.g., ['users', 'posts'])
+    apiCalls: string[];             // Internal API calls (e.g., ['/api/auth'])
 }
 
 export interface DependencyInfo {

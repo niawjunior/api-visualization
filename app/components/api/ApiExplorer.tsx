@@ -265,6 +265,7 @@ export function ApiExplorer({ currentPath, onOpenFile }: ApiExplorerProps) {
                 {selectedEndpoint && (
                     <ApiDependencyGraph
                         endpoint={selectedEndpoint}
+                        allEndpoints={endpoints}
                         onClose={() => setSelectedEndpoint(null)}
                         onOpenFile={onOpenFile}
                     />

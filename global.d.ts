@@ -36,6 +36,8 @@ interface ApiDependencies {
   external: DependencyInfo[];
   utilities: DependencyInfo[];
   grouped: GroupedDependency[];
+  tables: string[];
+  apiCalls: string[];
 }
 
 interface ApiEndpoint {

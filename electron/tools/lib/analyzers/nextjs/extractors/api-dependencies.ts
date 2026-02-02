@@ -63,12 +63,14 @@ export function extractApiDependencies(
         external: [],
         utilities: [],
         grouped: [],
+        tables: [],
+        apiCalls: [],
     };
     
     // 1. Extract from import statements
     extractFromImports(sourceFile, dependencies);
     
-    // 2. Extract from function calls (external URLs, dynamic imports)
+    // 2. Extract from function calls (external URLs, database, API calls)
     extractFromFunctionCalls(ctx.checker, functionBody, dependencies);
     
     // Deduplicate
@@ -76,6 +78,10 @@ export function extractApiDependencies(
     
     // 3. Group by module for UI display
     dependencies.grouped = groupByModule(dependencies);
+    
+    // 4. Deduplicate tables and apiCalls
+    dependencies.tables = [...new Set(dependencies.tables)];
+    dependencies.apiCalls = [...new Set(dependencies.apiCalls)];
     
     return dependencies;
 }
@@ -179,9 +185,15 @@ function extractFromFunctionCalls(
     deps: ApiDependencies
 ): void {
     function visit(node: ts.Node) {
-        // Look for fetch/axios calls with URL strings
         if (ts.isCallExpression(node)) {
             extractExternalCall(node, deps);
+            extractPrismaTableAccess(node, deps);
+            extractDrizzleTableAccess(node, deps);
+        }
+        
+        // Also check property access for prisma.model patterns
+        if (ts.isPropertyAccessExpression(node)) {
+            extractPrismaModelAccess(node, deps);
         }
         
         ts.forEachChild(node, visit);
@@ -190,6 +202,89 @@ function extractFromFunctionCalls(
     visit(functionBody);
 }
 
+/**
+ * Extract Prisma table access: prisma.user.findMany(), prisma.post.create()
+ */
+function extractPrismaModelAccess(node: ts.PropertyAccessExpression, deps: ApiDependencies): void {
+    // Pattern: prisma.MODEL.method() -> prisma is identifier, MODEL is property
+    if (!ts.isPropertyAccessExpression(node.expression)) return;
+    
+    const parent = node.expression;
+    if (!ts.isIdentifier(parent.expression)) return;
+    
+    const potentialPrisma = parent.expression.text.toLowerCase();
+    if (!['prisma', 'db', 'client'].includes(potentialPrisma)) return;
+    
+    // The middle property is the model/table name
+    const modelName = parent.name.text;
+    
+    // Common Prisma methods that indicate table access
+    const prismaMethod = node.name.text;
+    const prismaMethods = [
+        'findMany', 'findFirst', 'findUnique', 'findFirstOrThrow', 'findUniqueOrThrow',
+        'create', 'createMany', 'update', 'updateMany', 'upsert',
+        'delete', 'deleteMany', 'count', 'aggregate', 'groupBy'
+    ];
+    
+    if (prismaMethods.includes(prismaMethod)) {
+        deps.tables.push(modelName);
+    }
+}
+
+/**
+ * Extract Prisma table access from call expressions
+ */
+function extractPrismaTableAccess(node: ts.CallExpression, deps: ApiDependencies): void {
+    // Already handled in extractPrismaModelAccess via property access
+}
+
+/**
+ * Extract Drizzle table access: db.select().from(usersTable), db.insert(usersTable)
+ */
+function extractDrizzleTableAccess(node: ts.CallExpression, deps: ApiDependencies): void {
+    const expr = node.expression;
+    
+    // Look for .from(table) or .insert(table).into(table)
+    if (ts.isPropertyAccessExpression(expr)) {
+        const methodName = expr.name.text;
+        
+        // db.select().from(tableName)
+        if (methodName === 'from' && node.arguments.length > 0) {
+            const tableArg = node.arguments[0];
+            const tableName = extractTableName(tableArg);
+            if (tableName) {
+                deps.tables.push(tableName);
+            }
+        }
+        
+        // db.insert(tableName) or db.update(tableName) or db.delete(tableName)
+        if (['insert', 'update', 'delete'].includes(methodName) && node.arguments.length > 0) {
+            const tableArg = node.arguments[0];
+            const tableName = extractTableName(tableArg);
+            if (tableName) {
+                deps.tables.push(tableName);
+            }
+        }
+    }
+}
+
+/**
+ * Extract table name from identifier (e.g., usersTable -> users)
+ */
+function extractTableName(arg: ts.Expression): string | null {
+    if (ts.isIdentifier(arg)) {
+        let name = arg.text;
+        // Remove common suffixes
+        name = name.replace(/Table$/, '').replace(/Schema$/, '');
+        // Convert camelCase to lowercase
+        return name.toLowerCase();
+    }
+    return null;
+}
+
+/**
+ * Extract external API calls (fetch/axios) including internal /api/* calls
+ */
 function extractExternalCall(node: ts.CallExpression, deps: ApiDependencies): void {
     const expr = node.expression;
     let callName: string | null = null;
@@ -209,18 +304,30 @@ function extractExternalCall(node: ts.CallExpression, deps: ApiDependencies): vo
     if (node.arguments.length === 0) return;
     
     const firstArg = node.arguments[0];
-    let url = 'unknown URL';
+    let url = '';
     
     if (ts.isStringLiteral(firstArg)) {
         url = firstArg.text;
     } else if (ts.isTemplateExpression(firstArg) && firstArg.head) {
-        url = firstArg.head.text + '...';
+        url = firstArg.head.text;
     } else if (ts.isNoSubstitutionTemplateLiteral(firstArg)) {
         url = firstArg.text;
     }
     
-    // Only track external URLs (http/https)
-    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/api')) {
+    if (!url) return;
+    
+    // Track internal API calls separately
+    if (url.startsWith('/api/') || url.startsWith('/api')) {
+        deps.apiCalls.push(url.split('?')[0]); // Remove query params
+        deps.external.push({
+            name: `${callName}()`,
+            module: url,
+            type: 'external',
+            usage: `Internal: ${url}`,
+        });
+    }
+    // Track external URLs
+    else if (url.startsWith('http://') || url.startsWith('https://')) {
         deps.external.push({
             name: `${callName}()`,
             module: url,
