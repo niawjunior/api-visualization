@@ -128,11 +128,8 @@ function GroupedDependencyNode({ data }: {
         }}
       />
       
-      {/* Header - Clickable to expand */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full px-4 py-3 flex items-center gap-2 hover:bg-muted/50 transition-colors"
-      >
+      {/* Header */}
+      <div className="px-4 py-3 flex items-center gap-2">
         <div 
           className="p-1.5 rounded-md shrink-0"
           style={{ backgroundColor: `${config?.color}20` }}
@@ -151,26 +148,36 @@ function GroupedDependencyNode({ data }: {
           </div>
           <span className="text-xs text-muted-foreground truncate max-w-full">{data.module}</span>
         </div>
-        {data.count > 1 && (
-          <div className="shrink-0 text-muted-foreground">
-            {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </div>
-        )}
-      </button>
+      </div>
       
-      {/* Expanded items */}
-      {expanded && data.items.length > 1 && (
+      {/* Function names - always visible */}
+      {data.items.length > 0 && (
         <div className="border-t border-border/50 px-4 py-2 bg-muted/30">
-          <div className="text-xs text-muted-foreground space-y-1">
+          <div className="flex flex-wrap gap-1">
             {data.items.map((item, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="w-1 h-1 rounded-full" style={{ backgroundColor: config?.color }} />
-                <span className="font-mono">{item}</span>
-              </div>
+              <span 
+                key={i} 
+                className="px-1.5 py-0.5 text-[10px] font-mono rounded"
+                style={{ backgroundColor: `${config?.color}15`, color: config?.color }}
+              >
+                {item}
+              </span>
             ))}
           </div>
         </div>
       )}
+      
+      {/* Source handle for connecting to tables */}
+      <Handle 
+        type="source" 
+        position={Position.Right}
+        style={{ 
+          background: config?.color || '#94a3b8',
+          width: 8,
+          height: 8,
+          border: '2px solid white',
+        }}
+      />
     </div>
   );
 }
@@ -217,7 +224,45 @@ function ApiNode({ data }: { data: { label: string; methods: string[] } }) {
 const nodeTypes = {
   api: ApiNode,
   dependency: GroupedDependencyNode,
+  table: TableNode,
 };
+
+// ============================================================================
+// Table Node (Schema-style)
+// ============================================================================
+
+function TableNode({ data }: { data: { label: string } }) {
+  return (
+    <div className="rounded-lg border-2 border-emerald-500 shadow-lg overflow-hidden min-w-[140px] bg-card/95 backdrop-blur-sm">
+      {/* Target handle */}
+      <Handle 
+        type="target" 
+        position={Position.Left}
+        style={{ 
+          background: '#10b981',
+          width: 8,
+          height: 8,
+          border: '2px solid white',
+        }}
+      />
+      
+      {/* Header */}
+      <div className="bg-emerald-500 px-3 py-2 flex items-center gap-2">
+        <Database className="w-3.5 h-3.5 text-white" />
+        <span className="font-semibold text-xs text-white">{data.label}</span>
+      </div>
+      
+      {/* Schema hint */}
+      <div className="px-3 py-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          <span className="font-mono">id</span>
+          <span className="text-muted-foreground/50 ml-auto">PK</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ============================================================================
 // Graph Builder - Using Grouped Dependencies
@@ -252,6 +297,9 @@ function buildGraph(endpoint: ApiDependencyGraphProps['endpoint']): { nodes: Nod
   const angleStep = 100 / Math.max(grouped.length, 1);
   const startAngle = -50;
   
+  // Track database dependency nodes for connecting tables
+  const databaseNodeIds: string[] = [];
+  
   grouped.forEach((group, idx) => {
     const id = `group-${idx}`;
     const angle = startAngle + (idx * angleStep);
@@ -259,6 +307,11 @@ function buildGraph(endpoint: ApiDependencyGraphProps['endpoint']): { nodes: Nod
     
     const x = 200 + radius * Math.cos(radian);
     const y = 200 + radius * Math.sin(radian);
+    
+    // Track database nodes
+    if (group.type === 'database') {
+      databaseNodeIds.push(id);
+    }
     
     nodes.push({
       id,
@@ -288,6 +341,53 @@ function buildGraph(endpoint: ApiDependencyGraphProps['endpoint']): { nodes: Nod
         color: config?.color || '#94a3b8',
       },
     });
+  });
+  
+  // Add table nodes connected to database dependencies
+  const tables = deps.tables || [];
+  const tableSpacingY = 90; // Vertical spacing between tables
+  const tableOffsetX = 220; // Horizontal offset from database node
+  
+  tables.forEach((table, idx) => {
+    const tableId = `table-${idx}`;
+    
+    // Find the first database node to connect to
+    const dbNodeId = databaseNodeIds[0] || 'api';
+    const dbNode = nodes.find(n => n.id === dbNodeId);
+    
+    if (dbNode) {
+      // Position tables in a vertical stack to the right of database node
+      // Center the stack vertically around the database node
+      const totalHeight = (tables.length - 1) * tableSpacingY;
+      const startY = dbNode.position.y - totalHeight / 2;
+      
+      const x = dbNode.position.x + tableOffsetX;
+      const y = startY + (idx * tableSpacingY);
+      
+      nodes.push({
+        id: tableId,
+        type: 'table',
+        position: { x, y },
+        data: { label: table },
+      });
+      
+      // Connect to database dependency
+      edges.push({
+        id: `edge-${tableId}`,
+        source: dbNodeId,
+        target: tableId,
+        animated: false,
+        style: { 
+          stroke: '#10b981',
+          strokeWidth: 1.5,
+          strokeDasharray: '5,5',
+        },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: '#10b981',
+        },
+      });
+    }
   });
   
   return { nodes, edges };
@@ -392,41 +492,23 @@ function ApiDependencyGraphContent({ endpoint, allEndpoints = [], onClose, onOpe
           })}
         </div>
         
-        {/* Tables and API Calls */}
-        {((deps?.tables && deps.tables.length > 0) || (deps?.apiCalls && deps.apiCalls.length > 0)) && (
+        {/* API Calls (tables are now shown as nodes) */}
+        {deps?.apiCalls && deps.apiCalls.length > 0 && (
           <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border/50">
-            {deps?.tables && deps.tables.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Database className="w-4 h-4 text-emerald-500" />
-                <span className="text-sm font-medium">Tables:</span>
-                <div className="flex gap-1 flex-wrap">
-                  {deps.tables.map((table, i) => (
-                    <span 
-                      key={i}
-                      className="px-2 py-0.5 text-xs bg-emerald-500/10 text-emerald-600 rounded"
-                    >
-                      {table}
-                    </span>
-                  ))}
-                </div>
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-amber-500" />
+              <span className="text-sm font-medium">Internal API Calls:</span>
+              <div className="flex gap-1 flex-wrap">
+                {deps.apiCalls.map((api, i) => (
+                  <span 
+                    key={i}
+                    className="px-2 py-0.5 text-xs bg-amber-500/10 text-amber-600 rounded font-mono"
+                  >
+                    {api}
+                  </span>
+                ))}
               </div>
-            )}
-            {deps?.apiCalls && deps.apiCalls.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-amber-500" />
-                <span className="text-sm font-medium">API Calls:</span>
-                <div className="flex gap-1 flex-wrap">
-                  {deps.apiCalls.map((api, i) => (
-                    <span 
-                      key={i}
-                      className="px-2 py-0.5 text-xs bg-amber-500/10 text-amber-600 rounded font-mono"
-                    >
-                      {api}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         )}
       </div>
