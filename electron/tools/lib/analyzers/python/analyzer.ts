@@ -37,12 +37,30 @@ export async function analyzePythonEndpoints(
         // This file is in .../analyzers/python/analyzer.ts (compiled to .js)
         // script is in .../analyzers/python/scripts/scanner.py
         
-        const scriptPath = path.join(__dirname, 'scripts', 'scanner.py');
+        // We now have a 'scanner' package directory at `.../analyzers/python/scanner`
+        // We want to run `python3 -m scanner <path>` but we need to set PYTHONPATH to the parent dir of 'scanner'
         
-        if (!fs.existsSync(scriptPath)) {
-            console.error(`[PythonAnalyzer] Scanner script not found at: ${scriptPath}`);
-            resolve([]);
-            return;
+        const scannerPackageDir = path.join(__dirname, 'scanner');
+        const parentDir = path.dirname(scannerPackageDir); 
+        
+        // OR simply run the __main__.py directly? 
+        // python3 electron/tools/lib/analyzers/python/scanner/__main__.py <path>
+        // But doing `python3 -m scanner` is cleaner if we set PYTHONPATH.
+        
+        // Let's rely on running __main__.py directly for simplicity in spawning, 
+        // BUT we must set PYTHONPATH so imports like `from .core import ...` work? 
+        // Actually, relative imports in __main__ require -m execution.
+        
+        // Correct approach: `python3 -m scanner <projectPath>`
+        // CWD should be the parent directory: `electron/tools/lib/analyzers/python`
+        
+        const analyzersDir = path.join(__dirname); 
+        // We expect `scanner` folder to be in `analyzersDir`.
+        
+        if (!fs.existsSync(path.join(analyzersDir, 'scanner', '__main__.py'))) {
+             console.error(`[PythonAnalyzer] Scanner package not found at: ${path.join(analyzersDir, 'scanner')}`);
+             resolve([]);
+             return;
         }
 
         // Ensure standard paths are included for GUI apps (Homebrew, etc.)
@@ -51,10 +69,13 @@ export async function analyzePythonEndpoints(
             PATH: `/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${process.env.PATH || ''}`
         };
 
-        console.log(`[PythonAnalyzer] Spawning scanner: python3 ${scriptPath} ${projectPath}`);
-        console.log(`[PythonAnalyzer] PATH: ${env.PATH}`);
+        console.log(`[PythonAnalyzer] Spawning scanner: python3 -m scanner ${projectPath}`);
+        console.log(`[PythonAnalyzer] CWD: ${analyzersDir}`);
         
-        const pythonProcess = spawn('python3', [scriptPath, projectPath], { env });
+        const pythonProcess = spawn('python3', ['-m', 'scanner', projectPath], { 
+            env,
+            cwd: analyzersDir // Execute from the folder containing 'scanner' package
+        });
 
         let stdoutData = '';
         let stderrData = '';
@@ -103,8 +124,6 @@ export async function analyzePythonEndpoints(
         
         pythonProcess.on('error', (err) => {
              console.error("[PythonAnalyzer] Process error:", err);
-             // Verify cleanup happened?
-             try { if (fs.existsSync(scriptPath)) fs.unlinkSync(scriptPath); } catch {}
              resolve([]);
         });
     });
@@ -121,6 +140,9 @@ function mapToApiEndpoints(routes: PythonRoute[], projectPath: string): ApiEndpo
         }
         
         // Normalize method
+        if (!route.method) {
+            continue;
+        }
         const method = route.method.toUpperCase();
         const validMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
         
