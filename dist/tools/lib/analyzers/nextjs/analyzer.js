@@ -21,6 +21,7 @@ const response_1 = require("./extractors/response");
 const params_1 = require("./extractors/params");
 const api_dependencies_1 = require("./extractors/api-dependencies");
 const cache_1 = require("../core/cache");
+const config_1 = require("../core/config");
 // ============================================================================
 // Constants
 // ============================================================================
@@ -32,7 +33,7 @@ const HTTP_METHODS_SET = new Set(['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTI
  * Analyze a single route file.
  * Uses caching to skip re-analysis of unchanged files.
  */
-function analyzeRouteFile(filePath, projectRoot, useCache = true) {
+function analyzeRouteFile(filePath, projectRoot, useCache = true, config = config_1.DEFAULT_CONFIG) {
     const result = { routes: [], errors: [] };
     // Check cache first
     if (useCache) {
@@ -57,7 +58,7 @@ function analyzeRouteFile(filePath, projectRoot, useCache = true) {
         const apiPath = (0, path_utils_1.filePathToRoutePath)(filePath, root);
         // Find exported HTTP method functions
         typescript_1.default.forEachChild(sourceFile, (node) => {
-            const route = analyzeNode(node, checker, sourceFile, apiPath, filePath);
+            const route = analyzeNode(node, checker, sourceFile, apiPath, filePath, config);
             if (route) {
                 result.routes.push(route);
             }
@@ -73,7 +74,7 @@ function analyzeRouteFile(filePath, projectRoot, useCache = true) {
     }
     return result;
 }
-function analyzeNode(node, checker, sourceFile, apiPath, filePath) {
+function analyzeNode(node, checker, sourceFile, apiPath, filePath, config = config_1.DEFAULT_CONFIG) {
     let methodName = null;
     let functionBody = null;
     let functionNode = null;
@@ -112,7 +113,7 @@ function analyzeNode(node, checker, sourceFile, apiPath, filePath) {
     const requestBody = (0, request_1.extractRequestBody)(ctx, functionBody);
     const responses = (0, response_1.extractResponses)(ctx, functionBody);
     const queryParams = (0, params_1.extractQueryParams)(ctx, functionBody);
-    const dependencies = (0, api_dependencies_1.extractApiDependencies)(ctx, functionBody, sourceFile);
+    const dependencies = (0, api_dependencies_1.extractApiDependencies)(ctx, functionBody, sourceFile, config.analysis?.cache ?? true, config);
     return {
         method: methodName,
         path: apiPath,
@@ -137,28 +138,17 @@ function hasExportModifier(node) {
  */
 async function analyzeApiEndpoints(projectPath) {
     const endpoints = [];
-    // Find all route files
-    const patterns = [
-        '**/app/**/route.ts',
-        '**/app/**/route.tsx',
-        '**/app/**/route.js',
-        '**/pages/api/**/*.ts',
-        '**/pages/api/**/*.tsx',
-        '**/pages/api/**/*.js',
-    ];
-    const ignorePatterns = [
-        '**/node_modules/**',
-        '**/.next/**',
-        '**/dist/**',
-        '**/build/**',
-        '**/.git/**',
-    ];
+    // Load config
+    const configResult = (0, config_1.loadConfig)(projectPath);
+    const config = configResult.ok ? configResult.value : config_1.DEFAULT_CONFIG;
+    // Convert relative patterns to absolute globs if needed, or rely on cwd
+    // But config.include are globs relative to project root
     const routeFiles = [];
-    for (const pattern of patterns) {
+    for (const pattern of config.include) {
         const matches = await (0, glob_1.glob)(pattern, {
             cwd: projectPath,
             absolute: true,
-            ignore: ignorePatterns,
+            ignore: config.exclude,
         });
         routeFiles.push(...matches);
     }
@@ -171,7 +161,7 @@ async function analyzeApiEndpoints(projectPath) {
     const program = (0, program_1.getOrCreateProgram)(routeFiles, projectPath);
     // Analyze each file
     for (const filePath of routeFiles) {
-        const result = analyzeRouteFile(filePath, projectPath);
+        const result = analyzeRouteFile(filePath, projectPath, config.analysis.cache, config);
         for (const route of result.routes) {
             // Group routes by path
             const existingEndpoint = endpoints.find(e => e.path === route.path);

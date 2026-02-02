@@ -23,6 +23,7 @@ import { extractResponses } from './extractors/response';
 import { extractQueryParams, extractRouteParamsFromFunction } from './extractors/params';
 import { extractApiDependencies } from './extractors/api-dependencies';
 import { routeCache, clearAllCaches, getAllCacheStats } from '../core/cache';
+import { loadConfig, DEFAULT_CONFIG, ApiVizConfig } from '../core/config';
 
 // ============================================================================
 // Constants
@@ -38,7 +39,12 @@ const HTTP_METHODS_SET = new Set(['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTI
  * Analyze a single route file.
  * Uses caching to skip re-analysis of unchanged files.
  */
-export function analyzeRouteFile(filePath: string, projectRoot?: string, useCache: boolean = true): RouteAnalysisResult {
+export function analyzeRouteFile(
+    filePath: string, 
+    projectRoot?: string, 
+    useCache: boolean = true,
+    config: ApiVizConfig = DEFAULT_CONFIG
+): RouteAnalysisResult {
     const result: RouteAnalysisResult = { routes: [], errors: [] };
     
     // Check cache first
@@ -68,7 +74,7 @@ export function analyzeRouteFile(filePath: string, projectRoot?: string, useCach
         
         // Find exported HTTP method functions
         ts.forEachChild(sourceFile, (node) => {
-            const route = analyzeNode(node, checker, sourceFile, apiPath, filePath);
+            const route = analyzeNode(node, checker, sourceFile, apiPath, filePath, config);
             if (route) {
                 result.routes.push(route);
             }
@@ -92,7 +98,8 @@ function analyzeNode(
     checker: ts.TypeChecker,
     sourceFile: ts.SourceFile,
     apiPath: string,
-    filePath: string
+    filePath: string,
+    config: ApiVizConfig = DEFAULT_CONFIG
 ): RouteSchema | null {
     let methodName: string | null = null;
     let functionBody: ts.Block | null = null;
@@ -137,7 +144,7 @@ function analyzeNode(
     const requestBody = extractRequestBody(ctx, functionBody);
     const responses = extractResponses(ctx, functionBody);
     const queryParams = extractQueryParams(ctx, functionBody);
-    const dependencies = extractApiDependencies(ctx, functionBody, sourceFile);
+    const dependencies = extractApiDependencies(ctx, functionBody, sourceFile, config.analysis?.cache ?? true, config);
     
     return {
         method: methodName as HttpMethod,
@@ -166,31 +173,20 @@ function hasExportModifier(node: ts.Node): boolean {
 export async function analyzeApiEndpoints(projectPath: string): Promise<ApiEndpoint[]> {
     const endpoints: ApiEndpoint[] = [];
     
-    // Find all route files
-    const patterns = [
-        '**/app/**/route.ts',
-        '**/app/**/route.tsx',
-        '**/app/**/route.js',
-        '**/pages/api/**/*.ts',
-        '**/pages/api/**/*.tsx',
-        '**/pages/api/**/*.js',
-    ];
+    // Load config
+    const configResult = loadConfig(projectPath);
+    const config = configResult.ok ? configResult.value : DEFAULT_CONFIG;
     
-    const ignorePatterns = [
-        '**/node_modules/**',
-        '**/.next/**',
-        '**/dist/**',
-        '**/build/**',
-        '**/.git/**',
-    ];
+    // Convert relative patterns to absolute globs if needed, or rely on cwd
+    // But config.include are globs relative to project root
     
     const routeFiles: string[] = [];
     
-    for (const pattern of patterns) {
+    for (const pattern of config.include) {
         const matches = await glob(pattern, {
             cwd: projectPath,
             absolute: true,
-            ignore: ignorePatterns,
+            ignore: config.exclude,
         });
         routeFiles.push(...matches);
     }
@@ -207,7 +203,7 @@ export async function analyzeApiEndpoints(projectPath: string): Promise<ApiEndpo
     
     // Analyze each file
     for (const filePath of routeFiles) {
-        const result = analyzeRouteFile(filePath, projectPath);
+        const result = analyzeRouteFile(filePath, projectPath, config.analysis.cache, config);
         
         for (const route of result.routes) {
             // Group routes by path

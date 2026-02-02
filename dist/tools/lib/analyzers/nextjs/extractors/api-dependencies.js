@@ -10,44 +10,18 @@ exports.extractApiDependencies = extractApiDependencies;
  */
 const typescript_1 = __importDefault(require("typescript"));
 const cache_1 = require("../../core/cache");
+const config_1 = require("../../core/config");
 // ============================================================================
 // Pattern Definitions
 // ============================================================================
-const SERVICE_PATTERNS = [
-    /^@\/lib\//,
-    /^@\/services\//,
-    /^@\/server\//,
-    /^\.\.?\/lib\//,
-    /^\.\.?\/services\//,
-];
-const DATABASE_PATTERNS = [
-    '@prisma/client',
-    '@supabase/supabase-js',
-    'mongoose',
-    'drizzle-orm',
-    'kysely',
-    'sequelize',
-    'typeorm',
-    '@neondatabase',
-    '@planetscale',
-];
-const UTILITY_PATTERNS = [
-    /^@\/utils\//,
-    /^@\/helpers\//,
-    /^@\/config\//,
-    /^\.\.?\/utils\//,
-];
-const EXTERNAL_CALL_PATTERNS = [
-    'fetch',
-    'axios',
-];
+// Legacy patterns kept for fallback if needed, but we mostly use config now.
 // ============================================================================
 // Main Extraction Function
 // ============================================================================
 /**
  * Extract dependencies from a function body.
  */
-function extractApiDependencies(ctx, functionBody, sourceFile, useCache = true) {
+function extractApiDependencies(ctx, functionBody, sourceFile, useCache = true, config = config_1.DEFAULT_CONFIG) {
     // Check cache first
     if (useCache && sourceFile.fileName) {
         // We use sourceFile.fileName as the cache key
@@ -66,9 +40,9 @@ function extractApiDependencies(ctx, functionBody, sourceFile, useCache = true) 
         apiCalls: [],
     };
     // 1. Extract from import statements
-    extractFromImports(sourceFile, dependencies);
+    extractFromImports(sourceFile, dependencies, config);
     // 2. Extract from function calls (external URLs, database, API calls)
-    extractFromFunctionCalls(ctx.checker, functionBody, dependencies);
+    extractFromFunctionCalls(ctx.checker, functionBody, dependencies, config);
     // Deduplicate
     deduplicateDependencies(dependencies);
     // 3. Group by module for UI display
@@ -85,7 +59,7 @@ function extractApiDependencies(ctx, functionBody, sourceFile, useCache = true) 
 // ============================================================================
 // Import Analysis
 // ============================================================================
-function extractFromImports(sourceFile, deps) {
+function extractFromImports(sourceFile, deps, config) {
     typescript_1.default.forEachChild(sourceFile, (node) => {
         if (!typescript_1.default.isImportDeclaration(node))
             return;
@@ -94,7 +68,7 @@ function extractFromImports(sourceFile, deps) {
         const importPath = node.moduleSpecifier.text;
         const importedNames = getImportedNames(node);
         // Categorize the import
-        const category = categorizeImport(importPath);
+        const category = categorizeImport(importPath, config);
         if (!category)
             return;
         for (const name of importedNames) {
@@ -140,40 +114,35 @@ function getImportedNames(node) {
     }
     return names;
 }
-function categorizeImport(importPath) {
+function categorizeImport(importPath, config) {
+    const patterns = config.patterns || config_1.DEFAULT_CONFIG.patterns;
     // Check database
-    for (const pattern of DATABASE_PATTERNS) {
-        if (importPath.includes(pattern)) {
-            return 'database';
-        }
+    if (patterns.database && (0, config_1.matchesPattern)(importPath, patterns.database)) {
+        return 'database';
     }
     // Check services
-    for (const pattern of SERVICE_PATTERNS) {
-        if (pattern.test(importPath)) {
-            return 'service';
-        }
+    if (patterns.services && (0, config_1.matchesPattern)(importPath, patterns.services)) {
+        return 'service';
     }
     // Check utilities
-    for (const pattern of UTILITY_PATTERNS) {
-        if (pattern.test(importPath)) {
-            return 'utility';
-        }
+    if (patterns.utilities && (0, config_1.matchesPattern)(importPath, patterns.utilities)) {
+        return 'utility';
     }
     return null;
 }
 // ============================================================================
 // Function Call Analysis
 // ============================================================================
-function extractFromFunctionCalls(checker, functionBody, deps) {
+function extractFromFunctionCalls(checker, functionBody, deps, config) {
     function visit(node) {
         if (typescript_1.default.isCallExpression(node)) {
-            extractExternalCall(node, deps);
-            extractPrismaTableAccess(node, deps);
-            extractDrizzleTableAccess(node, deps);
+            extractExternalCall(node, deps, config);
+            extractPrismaTableAccess(node, deps); // Currently doesn't use config but could
+            extractDrizzleTableAccess(node, deps); // Currently doesn't use config but could
         }
         // Also check property access for prisma.model patterns
         if (typescript_1.default.isPropertyAccessExpression(node)) {
-            extractPrismaModelAccess(node, deps);
+            extractPrismaModelAccess(node, deps, config);
         }
         typescript_1.default.forEachChild(node, visit);
     }
@@ -182,7 +151,7 @@ function extractFromFunctionCalls(checker, functionBody, deps) {
 /**
  * Extract Prisma table access: prisma.user.findMany(), prisma.post.create()
  */
-function extractPrismaModelAccess(node, deps) {
+function extractPrismaModelAccess(node, deps, config) {
     // Pattern: prisma.MODEL.method() -> prisma is identifier, MODEL is property
     if (!typescript_1.default.isPropertyAccessExpression(node.expression))
         return;
@@ -190,7 +159,8 @@ function extractPrismaModelAccess(node, deps) {
     if (!typescript_1.default.isIdentifier(parent.expression))
         return;
     const potentialPrisma = parent.expression.text.toLowerCase();
-    if (!['prisma', 'db', 'client'].includes(potentialPrisma))
+    const validClientNames = config.database?.clientNames || config_1.DEFAULT_CONFIG.database.clientNames || [];
+    if (!validClientNames.includes(potentialPrisma))
         return;
     // The middle property is the model/table name
     const modelName = parent.name.text;
@@ -253,9 +223,10 @@ function extractTableName(arg) {
 /**
  * Extract external API calls (fetch/axios) including internal /api/* calls
  */
-function extractExternalCall(node, deps) {
+function extractExternalCall(node, deps, config) {
     const expr = node.expression;
     let callName = null;
+    const externalPatterns = config.patterns?.external || config_1.DEFAULT_CONFIG.patterns.external || [];
     // Direct call: fetch('url')
     if (typescript_1.default.isIdentifier(expr)) {
         callName = expr.text;
@@ -264,7 +235,9 @@ function extractExternalCall(node, deps) {
     else if (typescript_1.default.isPropertyAccessExpression(expr) && typescript_1.default.isIdentifier(expr.expression)) {
         callName = expr.expression.text;
     }
-    if (!callName || !EXTERNAL_CALL_PATTERNS.includes(callName))
+    // Check if call matches configured patterns
+    // We check exact match for function names like 'fetch' or module names 'axios'
+    if (!callName || !(0, config_1.matchesPattern)(callName, externalPatterns))
         return;
     // Try to extract URL from first argument
     if (node.arguments.length === 0)

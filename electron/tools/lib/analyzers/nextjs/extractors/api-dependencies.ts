@@ -6,6 +6,7 @@ import ts from 'typescript';
 import path from 'path';
 import type { ExtractionContext, ApiDependencies, DependencyInfo, GroupedDependency } from '../types';
 import { dependencyCache } from '../../core/cache';
+import { ApiVizConfig, DEFAULT_CONFIG, matchesPattern } from '../../core/config';
 
 // Re-export types for convenience
 export type { ApiDependencies, DependencyInfo, GroupedDependency };
@@ -14,38 +15,7 @@ export type { ApiDependencies, DependencyInfo, GroupedDependency };
 // Pattern Definitions
 // ============================================================================
 
-const SERVICE_PATTERNS = [
-    /^@\/lib\//,
-    /^@\/services\//,
-    /^@\/server\//,
-    /^\.\.?\/lib\//,
-    /^\.\.?\/services\//,
-];
-
-const DATABASE_PATTERNS = [
-    '@prisma/client',
-    '@supabase/supabase-js',
-    'mongoose',
-    'drizzle-orm',
-    'kysely',
-    'sequelize',
-    'typeorm',
-    '@neondatabase',
-    '@planetscale',
-];
-
-const UTILITY_PATTERNS = [
-    /^@\/utils\//,
-    /^@\/helpers\//,
-    /^@\/config\//,
-    /^\.\.?\/utils\//,
-];
-
-const EXTERNAL_CALL_PATTERNS = [
-    'fetch',
-    'axios',
-];
-
+// Legacy patterns kept for fallback if needed, but we mostly use config now.
 // ============================================================================
 // Main Extraction Function
 // ============================================================================
@@ -57,7 +27,8 @@ export function extractApiDependencies(
     ctx: ExtractionContext,
     functionBody: ts.Block,
     sourceFile: ts.SourceFile,
-    useCache: boolean = true
+    useCache: boolean = true,
+    config: ApiVizConfig = DEFAULT_CONFIG
 ): ApiDependencies {
     // Check cache first
     if (useCache && sourceFile.fileName) {
@@ -79,10 +50,10 @@ export function extractApiDependencies(
     };
     
     // 1. Extract from import statements
-    extractFromImports(sourceFile, dependencies);
+    extractFromImports(sourceFile, dependencies, config);
     
     // 2. Extract from function calls (external URLs, database, API calls)
-    extractFromFunctionCalls(ctx.checker, functionBody, dependencies);
+    extractFromFunctionCalls(ctx.checker, functionBody, dependencies, config);
     
     // Deduplicate
     deduplicateDependencies(dependencies);
@@ -106,7 +77,7 @@ export function extractApiDependencies(
 // Import Analysis
 // ============================================================================
 
-function extractFromImports(sourceFile: ts.SourceFile, deps: ApiDependencies): void {
+function extractFromImports(sourceFile: ts.SourceFile, deps: ApiDependencies, config: ApiVizConfig): void {
     ts.forEachChild(sourceFile, (node) => {
         if (!ts.isImportDeclaration(node)) return;
         if (!ts.isStringLiteral(node.moduleSpecifier)) return;
@@ -115,7 +86,7 @@ function extractFromImports(sourceFile: ts.SourceFile, deps: ApiDependencies): v
         const importedNames = getImportedNames(node);
         
         // Categorize the import
-        const category = categorizeImport(importPath);
+        const category = categorizeImport(importPath, config);
         if (!category) return;
         
         for (const name of importedNames) {
@@ -166,26 +137,22 @@ function getImportedNames(node: ts.ImportDeclaration): string[] {
     return names;
 }
 
-function categorizeImport(importPath: string): 'service' | 'database' | 'utility' | null {
+function categorizeImport(importPath: string, config: ApiVizConfig): 'service' | 'database' | 'utility' | null {
+    const patterns = config.patterns || DEFAULT_CONFIG.patterns;
+
     // Check database
-    for (const pattern of DATABASE_PATTERNS) {
-        if (importPath.includes(pattern)) {
-            return 'database';
-        }
+    if (patterns.database && matchesPattern(importPath, patterns.database)) {
+        return 'database';
     }
     
     // Check services
-    for (const pattern of SERVICE_PATTERNS) {
-        if (pattern.test(importPath)) {
-            return 'service';
-        }
+    if (patterns.services && matchesPattern(importPath, patterns.services)) {
+        return 'service';
     }
     
     // Check utilities
-    for (const pattern of UTILITY_PATTERNS) {
-        if (pattern.test(importPath)) {
-            return 'utility';
-        }
+    if (patterns.utilities && matchesPattern(importPath, patterns.utilities)) {
+        return 'utility';
     }
     
     return null;
@@ -198,18 +165,19 @@ function categorizeImport(importPath: string): 'service' | 'database' | 'utility
 function extractFromFunctionCalls(
     checker: ts.TypeChecker,
     functionBody: ts.Block,
-    deps: ApiDependencies
+    deps: ApiDependencies,
+    config: ApiVizConfig
 ): void {
     function visit(node: ts.Node) {
         if (ts.isCallExpression(node)) {
-            extractExternalCall(node, deps);
-            extractPrismaTableAccess(node, deps);
-            extractDrizzleTableAccess(node, deps);
+            extractExternalCall(node, deps, config);
+            extractPrismaTableAccess(node, deps); // Currently doesn't use config but could
+            extractDrizzleTableAccess(node, deps); // Currently doesn't use config but could
         }
         
         // Also check property access for prisma.model patterns
         if (ts.isPropertyAccessExpression(node)) {
-            extractPrismaModelAccess(node, deps);
+            extractPrismaModelAccess(node, deps, config);
         }
         
         ts.forEachChild(node, visit);
@@ -221,7 +189,11 @@ function extractFromFunctionCalls(
 /**
  * Extract Prisma table access: prisma.user.findMany(), prisma.post.create()
  */
-function extractPrismaModelAccess(node: ts.PropertyAccessExpression, deps: ApiDependencies): void {
+function extractPrismaModelAccess(
+    node: ts.PropertyAccessExpression, 
+    deps: ApiDependencies,
+    config: ApiVizConfig
+): void {
     // Pattern: prisma.MODEL.method() -> prisma is identifier, MODEL is property
     if (!ts.isPropertyAccessExpression(node.expression)) return;
     
@@ -229,7 +201,9 @@ function extractPrismaModelAccess(node: ts.PropertyAccessExpression, deps: ApiDe
     if (!ts.isIdentifier(parent.expression)) return;
     
     const potentialPrisma = parent.expression.text.toLowerCase();
-    if (!['prisma', 'db', 'client'].includes(potentialPrisma)) return;
+    const validClientNames = config.database?.clientNames || DEFAULT_CONFIG.database.clientNames || [];
+    
+    if (!validClientNames.includes(potentialPrisma)) return;
     
     // The middle property is the model/table name
     const modelName = parent.name.text;
@@ -301,9 +275,10 @@ function extractTableName(arg: ts.Expression): string | null {
 /**
  * Extract external API calls (fetch/axios) including internal /api/* calls
  */
-function extractExternalCall(node: ts.CallExpression, deps: ApiDependencies): void {
+function extractExternalCall(node: ts.CallExpression, deps: ApiDependencies, config: ApiVizConfig): void {
     const expr = node.expression;
     let callName: string | null = null;
+    const externalPatterns = config.patterns?.external || DEFAULT_CONFIG.patterns.external || [];
     
     // Direct call: fetch('url')
     if (ts.isIdentifier(expr)) {
@@ -314,7 +289,9 @@ function extractExternalCall(node: ts.CallExpression, deps: ApiDependencies): vo
         callName = expr.expression.text;
     }
     
-    if (!callName || !EXTERNAL_CALL_PATTERNS.includes(callName)) return;
+    // Check if call matches configured patterns
+    // We check exact match for function names like 'fetch' or module names 'axios'
+    if (!callName || !matchesPattern(callName, externalPatterns)) return;
     
     // Try to extract URL from first argument
     if (node.arguments.length === 0) return;

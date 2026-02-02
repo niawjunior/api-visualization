@@ -117,18 +117,19 @@ export async function tryCatchAsync<T>(
 /**
  * Collect results, separating successes from failures
  */
-export function collectResults<T>(results: Result<T>[]): {
+export function collectResults<T, E = AnalysisError>(results: Result<T, E>[]): {
     successes: T[];
-    errors: AnalysisError[];
+    errors: E[];
 } {
     const successes: T[] = [];
-    const errors: AnalysisError[] = [];
+    const errors: E[] = [];
     
     for (const result of results) {
         if (result.ok) {
             successes.push(result.value);
         } else {
-            errors.push(result.error);
+            // TS sometimes fails to narrow in loops, force cast specific branch
+            errors.push((result as { ok: false; error: E }).error);
         }
     }
     
