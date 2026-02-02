@@ -15,7 +15,9 @@ const glob_1 = require("glob");
 const registry_1 = require("./registry");
 // Import and register analyzers
 const nextjs_1 = require("./nextjs");
+const python_1 = require("./python");
 registry_1.analyzerRegistry.register(nextjs_1.nextjsAnalyzer);
+registry_1.analyzerRegistry.register(python_1.pythonFileDependencyAnalyzer);
 /**
  * Find the project root by looking for package.json
  */

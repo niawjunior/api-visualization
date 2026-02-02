@@ -3,10 +3,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.pythonFrameworkAnalyzer = void 0;
+exports.pythonFrameworkAnalyzer = exports.analyzePythonDependencies = exports.pythonFileDependencyAnalyzer = void 0;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const analyzer_1 = require("./analyzer");
+var file_dep_analyzer_1 = require("./file-dep-analyzer");
+Object.defineProperty(exports, "pythonFileDependencyAnalyzer", { enumerable: true, get: function () { return file_dep_analyzer_1.pythonFileDependencyAnalyzer; } });
+var deps_runner_1 = require("./deps-runner");
+Object.defineProperty(exports, "analyzePythonDependencies", { enumerable: true, get: function () { return deps_runner_1.analyzePythonDependencies; } });
 exports.pythonFrameworkAnalyzer = {
     name: 'python',
     detect: async (projectPath, config) => {

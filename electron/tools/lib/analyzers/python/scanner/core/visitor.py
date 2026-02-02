@@ -3,15 +3,13 @@ from typing import Set, List, Optional
 from .models import FileData, SchemaField, RouteDef, RouterDef, IncludeDef
 from ..adapters.base import BaseAdapter
 
-class ASTVisitor(ast.NodeVisitor):
-    def __init__(self, file_data: FileData, adapters: List[BaseAdapter]):
+class ImportVisitor(ast.NodeVisitor):
+    """
+    Lightweight visitor that ONLY parses imports.
+    Used for dependency graph generation to avoid overhead of full API analysis.
+    """
+    def __init__(self, file_data: FileData):
         self.data = file_data
-        self.adapters = adapters
-        self.current_route: Optional[RouteDef] = None
-        self.include_child_calls: Set[str] = set()
-        
-        # Precompute constants map for adapters if needed, or pass reference
-        # Adapters already hold reference to self.data.constants via constructor
 
     def visit_Import(self, node):
         for alias in node.names:
@@ -27,6 +25,13 @@ class ASTVisitor(ast.NodeVisitor):
             full_name = f"{source}.{alias.name}" if source else alias.name
             self.data.imports[alias.asname or alias.name] = full_name
         self.generic_visit(node)
+
+class ASTVisitor(ImportVisitor):
+    def __init__(self, file_data: FileData, adapters: List[BaseAdapter]):
+        super().__init__(file_data)
+        self.adapters = adapters
+        self.current_route: Optional[RouteDef] = None
+        self.include_child_calls: Set[str] = set()
 
     def visit_Assign(self, node):
         # 1. Constant tracking
@@ -82,46 +87,46 @@ class ASTVisitor(ast.NodeVisitor):
     def visit_FunctionDef(self, node):
         # Route detection
         for decorator in node.decorator_list:
-             if not isinstance(decorator, ast.Call): continue
-             
-             for adapter in self.adapters:
-                 route_info = adapter.parse_decorator(decorator, node)
-                 if route_info:
-                     method, path, resp_arg = route_info
-                     router_var = "app"
-                     fname = self._get_func_name(decorator.func)
-                     if '.' in fname: router_var = fname.split('.')[0]
-                     
-                     route = RouteDef(path, method, router_var, node.lineno, self.data.file_path)
-                     
-                     # Request Body (Generic)
-                     SPECIAL_TYPES = {'Request', 'Response', 'BackgroundTasks', 'Session', 'AsyncSession', 'HTTPConnection', 'WebSocket', 'HTTPException'}
-                     for arg in node.args.args:
+              if not isinstance(decorator, ast.Call): continue
+              
+              for adapter in self.adapters:
+                  route_info = adapter.parse_decorator(decorator, node)
+                  if route_info:
+                      method, path, resp_arg = route_info
+                      router_var = "app"
+                      fname = self._get_func_name(decorator.func)
+                      if '.' in fname: router_var = fname.split('.')[0]
+                      
+                      route = RouteDef(path, method, router_var, node.lineno, self.data.file_path)
+                      
+                      # Request Body (Generic)
+                      SPECIAL_TYPES = {'Request', 'Response', 'BackgroundTasks', 'Session', 'AsyncSession', 'HTTPConnection', 'WebSocket', 'HTTPException'}
+                      for arg in node.args.args:
                         if arg.arg == 'self': continue
                         if not arg.annotation: continue
                         type_name = self._get_base_type_name(arg.annotation)
                         if type_name and type_name not in SPECIAL_TYPES:
                             route.request_model_name = type_name
                             break
-                     
-                     # Response Model
-                     if resp_arg:
-                         resp_node = self._extract_kwarg(decorator, resp_arg, None)
-                         if resp_node:
-                             route.response_model_name = self._get_base_type_name(resp_node)
-                     
-                     if not route.response_model_name and node.returns:
-                         route.response_model_name = self._get_base_type_name(node.returns)
-                     
-                     if router_var not in self.data.routers:
-                         self.data.routers[router_var] = RouterDef(router_var)
-                     self.data.routers[router_var].routes.append(route)
-                     
-                     # Context for dependency analysis
-                     self.current_route = route
-                     self.generic_visit(node)
-                     self.current_route = None
-                     return
+                      
+                      # Response Model
+                      if resp_arg:
+                          resp_node = self._extract_kwarg(decorator, resp_arg, None)
+                          if resp_node:
+                              route.response_model_name = self._get_base_type_name(resp_node)
+                      
+                      if not route.response_model_name and node.returns:
+                          route.response_model_name = self._get_base_type_name(node.returns)
+                      
+                      if router_var not in self.data.routers:
+                          self.data.routers[router_var] = RouterDef(router_var)
+                      self.data.routers[router_var].routes.append(route)
+                      
+                      # Context for dependency analysis
+                      self.current_route = route
+                      self.generic_visit(node)
+                      self.current_route = None
+                      return
 
         self.generic_visit(node)
     

@@ -31,7 +31,7 @@ class ProjectScanner:
         # Type resolver initialized after file scan or lazily
         self.type_resolver = None 
 
-    def scan(self):
+    def scan(self, deps_only: bool = False):
         # 1. Parse all files
         for r, ds, fs in os.walk(self.root):
             if any(p.startswith('.') or p in ['__pycache__', 'node_modules', 'venv', 'env'] for p in Path(r).parts): continue
@@ -45,19 +45,25 @@ class ProjectScanner:
                             tree = ast.parse(source, filename=str(full_path))
                             fd = FileData(rel_path)
                             
-                            # Initialize Adapters with shared constants context
-                            adapters = [
-                                CustomAdapter(fd.constants),
-                                FastAPIAdapter(fd.constants)
-                            ]
+                            if deps_only:
+                                # Lightweight scan
+                                from .core.visitor import ImportVisitor
+                                visitor = ImportVisitor(fd)
+                                visitor.visit(tree)
+                            else:
+                                # Full scan
+                                adapters = [
+                                    CustomAdapter(fd.constants),
+                                    FastAPIAdapter(fd.constants)
+                                ]
+                                visitor = ASTVisitor(fd, adapters)
+                                visitor.visit(tree)
+                                
+                                for c in visitor.include_child_calls:
+                                    resolved = self._resolve_local_var(fd, c)
+                                    self.global_includes_children.add(resolved)
                             
-                            visitor = ASTVisitor(fd, adapters)
-                            visitor.visit(tree)
                             self.files[rel_path] = fd
-                            
-                            for c in visitor.include_child_calls:
-                                resolved = self._resolve_local_var(fd, c)
-                                self.global_includes_children.add(resolved)
                                 
                     except Exception as e:
                         logging.error(f"Failed to parse {rel_path}: {e}")
@@ -169,15 +175,23 @@ class ProjectScanner:
         if route.response_model_name:
              route.response_schema = self.type_resolver.find_model_fields(fd, route.response_model_name)
 
+from .deps import generate_dependency_graph
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("path")
+    p.add_argument("--deps", action="store_true", help="Output dependency graph instead of endpoints")
     args = p.parse_args()
     
     scanner = ProjectScanner(args.path)
-    scanner.scan()
-    scanner.resolve()
+    scanner.scan(deps_only=args.deps)
     
+    if args.deps:
+        graph = generate_dependency_graph(scanner.files, scanner.import_resolver)
+        print(json.dumps(graph, indent=2))
+        return
+
+    scanner.resolve()
     print(json.dumps([r.to_dict() for r in scanner.endpoints], indent=2))
 
 if __name__ == "__main__":

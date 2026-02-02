@@ -17,8 +17,17 @@ parentPort?.on('message', async (task) => {
             const results = await calculateFolderSize(task.payload.path);
             parentPort?.postMessage({ type: 'success', results });
         } else if (task.type === 'deps') {
-            const results = await analyzeDependencies(task.payload.path);
-            parentPort?.postMessage({ type: 'success', results });
+            // Special handling for Python projects to use AST-based bulk analysis
+            const { pythonFrameworkAnalyzer, analyzePythonDependencies } = await import('./lib/analyzers/python');
+            const isPython = await pythonFrameworkAnalyzer.detect(task.payload.path, {});
+            
+            if (isPython) {
+                 const results = await analyzePythonDependencies(task.payload.path);
+                 parentPort?.postMessage({ type: 'success', results });
+            } else {
+                 const results = await analyzeDependencies(task.payload.path);
+                 parentPort?.postMessage({ type: 'success', results });
+            }
         } else if (task.type === 'detect-project') {
             const { detectProject } = await import('./lib/project-detection');
             const results = await detectProject(task.payload.path);
