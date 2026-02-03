@@ -469,43 +469,46 @@ function ApiDependencyGraphContent({ endpoint, allEndpoints = [], onClose, onOpe
       className="absolute inset-0 z-50 bg-background/95 backdrop-blur-sm"
     >
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-10 px-6 py-4 border-b border-border bg-card/80 backdrop-blur-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h2 className="text-lg font-semibold">API Dependencies</h2>
-            <code className="px-3 py-1.5 bg-muted rounded-lg font-mono text-sm">
+      <div className="absolute top-0 left-0 right-0 z-10 px-4 md:px-6 py-4 border-b border-border bg-card/95 backdrop-blur-md shadow-sm transition-all">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3 min-w-0">
+            <h2 className="text-lg font-semibold shrink-0">API Dependencies</h2>
+            <code 
+              className="px-3 py-1.5 bg-muted/50 border border-border/50 rounded-lg font-mono text-xs md:text-sm truncate max-w-[200px] md:max-w-[400px]"
+              title={endpoint.path}
+            >
               {endpoint.path}
             </code>
             {onOpenFile && endpoint.filePath && (
               <button
                 onClick={() => onOpenFile(endpoint.filePath!)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 rounded-md transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 rounded-md transition-colors"
               >
                 <ExternalLink className="w-3 h-3" />
-                Open Source
+                <span className="hidden sm:inline">Open Source</span>
               </button>
             )}
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-muted rounded-lg transition-colors"
+            className="absolute top-4 right-4 md:static p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
         
         {/* Legend */}
-        <div className="flex items-center gap-6 mt-3">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-4">
           {Object.entries(CATEGORY_CONFIG).map(([key, config]) => {
             const count = countByType[key as keyof typeof countByType] || 0;
             return (
               <div key={key} className="flex items-center gap-2">
                 <div 
-                  className="w-3 h-3 rounded-sm"
+                  className="w-2.5 h-2.5 rounded-sm shadow-sm"
                   style={{ backgroundColor: config.color }}
                 />
-                <span className="text-sm text-muted-foreground">
-                  {config.label} ({count})
+                <span className="text-xs md:text-sm text-muted-foreground font-medium">
+                  {config.label} <span className="text-foreground/80">({count})</span>
                 </span>
               </div>
             );
@@ -514,20 +517,21 @@ function ApiDependencyGraphContent({ endpoint, allEndpoints = [], onClose, onOpe
         
         {/* API Calls (tables are now shown as nodes) */}
         {deps?.apiCalls && deps.apiCalls.length > 0 && (
-          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border/50">
-            <div className="flex items-center gap-2">
-              <Globe className="w-4 h-4 text-amber-500" />
-              <span className="text-sm font-medium">Internal API Calls:</span>
-              <div className="flex gap-1 flex-wrap">
-                {deps.apiCalls.map((api, i) => (
-                  <span 
-                    key={i}
-                    className="px-2 py-0.5 text-xs bg-amber-500/10 text-amber-600 rounded font-mono"
-                  >
-                    {api}
-                  </span>
-                ))}
-              </div>
+          <div className="flex flex-wrap items-start md:items-center gap-3 mt-4 pt-3 border-t border-border/50">
+            <div className="flex items-center gap-1.5 shrink-0 text-amber-600/90">
+              <Globe className="w-3.5 h-3.5" />
+              <span className="text-xs font-semibold">Internal Calls:</span>
+            </div>
+            <div className="flex gap-1.5 flex-wrap">
+              {deps.apiCalls.map((api, i) => (
+                <span 
+                  key={i}
+                  className="px-2 py-0.5 text-[10px] md:text-xs bg-amber-500/10 text-amber-700 border border-amber-500/20 rounded-md font-mono"
+                  title={api}
+                >
+                  {api}
+                </span>
+              ))}
             </div>
           </div>
         )}
