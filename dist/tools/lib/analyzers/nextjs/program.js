@@ -39,7 +39,8 @@ function getOrCreateProgram(files, projectRoot) {
             compilerOptions = { ...compilerOptions, ...parsed.options };
         }
     }
-    cachedProgram = typescript_1.default.createProgram(files, compilerOptions);
+    // Use incremental build if available
+    cachedProgram = typescript_1.default.createProgram(files, compilerOptions, undefined, cachedProgram || undefined);
     cachedProjectRoot = projectRoot;
     cachedFiles = new Set(files);
     return cachedProgram;

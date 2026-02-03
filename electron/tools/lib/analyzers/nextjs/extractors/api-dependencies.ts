@@ -15,6 +15,10 @@ export type { ApiDependencies, DependencyInfo, GroupedDependency };
 // Pattern Definitions
 // ============================================================================
 
+import { extractPrismaModelAccess } from './prisma';
+import { extractDrizzleTableAccess } from './drizzle';
+import { extractExternalCall } from './external-calls';
+
 // Legacy patterns kept for fallback if needed, but we mostly use config now.
 // ============================================================================
 // Main Extraction Function
@@ -171,8 +175,7 @@ function extractFromFunctionCalls(
     function visit(node: ts.Node) {
         if (ts.isCallExpression(node)) {
             extractExternalCall(node, deps, config);
-            extractPrismaTableAccess(node, deps); // Currently doesn't use config but could
-            extractDrizzleTableAccess(node, deps); // Currently doesn't use config but could
+            extractDrizzleTableAccess(node, deps);
         }
         
         // Also check property access for prisma.model patterns
@@ -184,150 +187,6 @@ function extractFromFunctionCalls(
     }
     
     visit(functionBody);
-}
-
-/**
- * Extract Prisma table access: prisma.user.findMany(), prisma.post.create()
- */
-function extractPrismaModelAccess(
-    node: ts.PropertyAccessExpression, 
-    deps: ApiDependencies,
-    config: ApiVizConfig
-): void {
-    // Pattern: prisma.MODEL.method() -> prisma is identifier, MODEL is property
-    if (!ts.isPropertyAccessExpression(node.expression)) return;
-    
-    const parent = node.expression;
-    if (!ts.isIdentifier(parent.expression)) return;
-    
-    const potentialPrisma = parent.expression.text.toLowerCase();
-    const validClientNames = config.database?.clientNames || DEFAULT_CONFIG.database.clientNames || [];
-    
-    if (!validClientNames.includes(potentialPrisma)) return;
-    
-    // The middle property is the model/table name
-    const modelName = parent.name.text;
-    
-    // Common Prisma methods that indicate table access
-    const prismaMethod = node.name.text;
-    const prismaMethods = [
-        'findMany', 'findFirst', 'findUnique', 'findFirstOrThrow', 'findUniqueOrThrow',
-        'create', 'createMany', 'update', 'updateMany', 'upsert',
-        'delete', 'deleteMany', 'count', 'aggregate', 'groupBy'
-    ];
-    
-    if (prismaMethods.includes(prismaMethod)) {
-        deps.tables.push(modelName);
-    }
-}
-
-/**
- * Extract Prisma table access from call expressions
- */
-function extractPrismaTableAccess(node: ts.CallExpression, deps: ApiDependencies): void {
-    // Already handled in extractPrismaModelAccess via property access
-}
-
-/**
- * Extract Drizzle table access: db.select().from(usersTable), db.insert(usersTable)
- */
-function extractDrizzleTableAccess(node: ts.CallExpression, deps: ApiDependencies): void {
-    const expr = node.expression;
-    
-    // Look for .from(table) or .insert(table).into(table)
-    if (ts.isPropertyAccessExpression(expr)) {
-        const methodName = expr.name.text;
-        
-        // db.select().from(tableName)
-        if (methodName === 'from' && node.arguments.length > 0) {
-            const tableArg = node.arguments[0];
-            const tableName = extractTableName(tableArg);
-            if (tableName) {
-                deps.tables.push(tableName);
-            }
-        }
-        
-        // db.insert(tableName) or db.update(tableName) or db.delete(tableName)
-        if (['insert', 'update', 'delete'].includes(methodName) && node.arguments.length > 0) {
-            const tableArg = node.arguments[0];
-            const tableName = extractTableName(tableArg);
-            if (tableName) {
-                deps.tables.push(tableName);
-            }
-        }
-    }
-}
-
-/**
- * Extract table name from identifier (e.g., usersTable -> users)
- */
-function extractTableName(arg: ts.Expression): string | null {
-    if (ts.isIdentifier(arg)) {
-        let name = arg.text;
-        // Remove common suffixes
-        name = name.replace(/Table$/, '').replace(/Schema$/, '');
-        // Convert camelCase to lowercase
-        return name.toLowerCase();
-    }
-    return null;
-}
-
-/**
- * Extract external API calls (fetch/axios) including internal /api/* calls
- */
-function extractExternalCall(node: ts.CallExpression, deps: ApiDependencies, config: ApiVizConfig): void {
-    const expr = node.expression;
-    let callName: string | null = null;
-    const externalPatterns = config.patterns?.external || DEFAULT_CONFIG.patterns.external || [];
-    
-    // Direct call: fetch('url')
-    if (ts.isIdentifier(expr)) {
-        callName = expr.text;
-    }
-    // Method call: axios.get('url')
-    else if (ts.isPropertyAccessExpression(expr) && ts.isIdentifier(expr.expression)) {
-        callName = expr.expression.text;
-    }
-    
-    // Check if call matches configured patterns
-    // We check exact match for function names like 'fetch' or module names 'axios'
-    if (!callName || !matchesPattern(callName, externalPatterns)) return;
-    
-    // Try to extract URL from first argument
-    if (node.arguments.length === 0) return;
-    
-    const firstArg = node.arguments[0];
-    let url = '';
-    
-    if (ts.isStringLiteral(firstArg)) {
-        url = firstArg.text;
-    } else if (ts.isTemplateExpression(firstArg) && firstArg.head) {
-        url = firstArg.head.text;
-    } else if (ts.isNoSubstitutionTemplateLiteral(firstArg)) {
-        url = firstArg.text;
-    }
-    
-    if (!url) return;
-    
-    // Track internal API calls separately
-    if (url.startsWith('/api/') || url.startsWith('/api')) {
-        deps.apiCalls.push(url.split('?')[0]); // Remove query params
-        deps.external.push({
-            name: `${callName}()`,
-            module: url,
-            type: 'external',
-            usage: `Internal: ${url}`,
-        });
-    }
-    // Track external URLs
-    else if (url.startsWith('http://') || url.startsWith('https://')) {
-        deps.external.push({
-            name: `${callName}()`,
-            module: url,
-            type: 'external',
-            usage: url,
-        });
-    }
 }
 
 // ============================================================================

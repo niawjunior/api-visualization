@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:react\" \"npm run dev:electron\"",
     "dev:react": "next dev",
-    "dev:electron": "wait-on tcp:3000 && tsc electron/main.ts electron/preload.ts electron/tools/fs.ts electron/tools/apiAnalyzer.ts electron/tools/lib/types.ts electron/tools/lib/utils.ts electron/tools/lib/scanner.ts electron/tools/lib/read.ts  electron/tools/lib/analyze.ts electron/tools/searchWorker.ts --outDir dist --target esnext --module commonjs --esModuleInterop --skipLibCheck && cp -r electron/tools/lib/analyzers/python/scanner dist/tools/lib/analyzers/python/ && electron . --dev",
-    "build": "next build && tsc electron/main.ts electron/preload.ts electron/tools/fs.ts electron/tools/apiAnalyzer.ts electron/tools/lib/types.ts electron/tools/lib/utils.ts electron/tools/lib/read.ts  electron/tools/lib/analyze.ts electron/tools/searchWorker.ts --outDir dist --target esnext --module commonjs --esModuleInterop --skipLibCheck && cp -r electron/tools/lib/analyzers/python/scanner dist/tools/lib/analyzers/python/",
+    "dev:electron": "wait-on tcp:3000 && tsc electron/main.ts electron/preload.ts electron/tools/fs.ts electron/tools/lib/types.ts electron/tools/lib/utils.ts electron/tools/lib/scanner.ts electron/tools/lib/read.ts  electron/tools/lib/analyze.ts electron/tools/searchWorker.ts --outDir dist --target esnext --module commonjs --esModuleInterop --skipLibCheck && cp -r electron/tools/lib/analyzers/python/scanner dist/tools/lib/analyzers/python/ && electron . --dev",
+    "build": "next build && tsc electron/main.ts electron/preload.ts electron/tools/fs.ts electron/tools/lib/types.ts electron/tools/lib/utils.ts electron/tools/lib/read.ts  electron/tools/lib/analyze.ts electron/tools/searchWorker.ts --outDir dist --target esnext --module commonjs --esModuleInterop --skipLibCheck && cp -r electron/tools/lib/analyzers/python/scanner dist/tools/lib/analyzers/python/",
     "dist": "npm run build && electron-builder",
     "start": "electron .",
     "lint": "next lint"

@@ -37,7 +37,8 @@ export function getOrCreateProgram(files: string[], projectRoot: string): ts.Pro
         }
     }
     
-    cachedProgram = ts.createProgram(files, compilerOptions);
+    // Use incremental build if available
+    cachedProgram = ts.createProgram(files, compilerOptions, undefined, cachedProgram || undefined);
     cachedProjectRoot = projectRoot;
     cachedFiles = new Set(files);
     

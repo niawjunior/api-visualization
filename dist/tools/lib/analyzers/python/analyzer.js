@@ -9,21 +9,6 @@ const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 async function analyzePythonEndpoints(projectPath, config) {
     return new Promise((resolve, reject) => {
-        // Use the actual script file
-        // In dev: inside scripts folder. In prod: need to ensure it's unpacked or resolve correctly.
-        // Assuming standard structure: ./scripts/scanner.py relative to this file
-        // This file is in .../analyzers/python/analyzer.ts (compiled to .js)
-        // script is in .../analyzers/python/scripts/scanner.py
-        // We now have a 'scanner' package directory at `.../analyzers/python/scanner`
-        // We want to run `python3 -m scanner <path>` but we need to set PYTHONPATH to the parent dir of 'scanner'
-        const scannerPackageDir = path_1.default.join(__dirname, 'scanner');
-        const parentDir = path_1.default.dirname(scannerPackageDir);
-        // OR simply run the __main__.py directly? 
-        // python3 electron/tools/lib/analyzers/python/scanner/__main__.py <path>
-        // But doing `python3 -m scanner` is cleaner if we set PYTHONPATH.
-        // Let's rely on running __main__.py directly for simplicity in spawning, 
-        // BUT we must set PYTHONPATH so imports like `from .core import ...` work? 
-        // Actually, relative imports in __main__ require -m execution.
         // Correct approach: `python3 -m scanner <projectPath>`
         // CWD should be the parent directory: `electron/tools/lib/analyzers/python`
         const analyzersDir = path_1.default.join(__dirname);

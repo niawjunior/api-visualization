@@ -10,9 +10,7 @@ import { DependencyGraph, DependencyNode, DependencyEdge, AnalyzerOptions } from
 
 // Import and register analyzers
 import { nextjsAnalyzer } from './nextjs';
-import { pythonFileDependencyAnalyzer } from './python';
 analyzerRegistry.register(nextjsAnalyzer);
-analyzerRegistry.register(pythonFileDependencyAnalyzer);
 
 /**
  * Find the project root by looking for package.json

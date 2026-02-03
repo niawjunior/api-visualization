@@ -4,9 +4,7 @@ from .models import FileData, SchemaField, RouteDef, RouterDef, IncludeDef
 from ..adapters.base import BaseAdapter
 import os
 
-def debug_log(msg):
-    with open("/Users/niawjunior/Desktop/api-visualization/scanner_debug.log", "a") as f:
-        f.write(msg + "\n")
+
 
 class ImportVisitor(ast.NodeVisitor):
     """
@@ -207,7 +205,6 @@ class ASTVisitor(ImportVisitor):
                 mod = dep_name.split('.')[0] if '.' in dep_name else "Dependencies"
                 
                 self._add_dep(cat, mod, dep_name)
-                debug_log(f"FOUND DEP: {dep_name} type={cat}")
                 return
 
         is_db = ("session" in fname or "db" in fname or "repo" in fname) and \
@@ -282,7 +279,6 @@ class ASTVisitor(ImportVisitor):
         """
         Scans function arguments for Depends() usage, either as default values or within Annotated.
         """
-        debug_log(f"Process Func Deps: {func_node.name}")
         for arg in func_node.args.args:
             # 1. Defaults: param: Type = Depends(dep)
             # Defaults are stored in separate list matching args from end, but let's check AST matching if possible.

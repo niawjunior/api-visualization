@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { analyzePythonEndpoints } from './analyzer';
 
-export { pythonFileDependencyAnalyzer } from './file-dep-analyzer';
+
 export { analyzePythonDependencies } from './deps-runner';
 
 export const pythonFrameworkAnalyzer: ApiAnalyzer = {
