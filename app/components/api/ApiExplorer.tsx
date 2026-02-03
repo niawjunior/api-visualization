@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Filter, Loader2, AlertCircle, RefreshCw, Network, GitBranch } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -64,6 +64,21 @@ export function ApiExplorer({ currentPath, onOpenFile }: ApiExplorerProps) {
     const [methodFilter, setMethodFilter] = useState<HttpMethod[]>([]);
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
     const [selectedEndpoint, setSelectedEndpoint] = useState<LocalApiEndpoint | null>(null);
+    
+    const searchInputRef = useRef<HTMLInputElement>(null);
+
+    // Keyboard shortcut for search
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
+                e.preventDefault();
+                searchInputRef.current?.focus();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
     
     // Load endpoints
     const loadEndpoints = async () => {
@@ -171,7 +186,8 @@ export function ApiExplorer({ currentPath, onOpenFile }: ApiExplorerProps) {
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <Input
-                                placeholder="Search endpoints by path or description..."
+                                ref={searchInputRef}
+                                placeholder="Search endpoints by path or description... (Cmd+P)"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="pl-9 h-10 bg-background/50"

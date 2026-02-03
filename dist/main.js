@@ -55,9 +55,75 @@ const isPathAllowed = (targetPath) => {
 };
 // Set the app name for macOS menu bar
 electron_1.app.setName('API Visualization');
-// Performance: Disable default menu (article recommendation #8)
+// Restoration of standard menu for keyboard shortcuts
 const electron_2 = require("electron");
-electron_2.Menu.setApplicationMenu(null);
+const template = [
+    ...(process.platform === 'darwin' ? [{
+            label: electron_1.app.name,
+            submenu: [
+                { role: 'about' },
+                { type: 'separator' },
+                { role: 'services' },
+                { type: 'separator' },
+                { role: 'hide' },
+                { role: 'hideOthers' },
+                { role: 'unhide' },
+                { type: 'separator' },
+                { role: 'quit' }
+            ]
+        }] : []),
+    {
+        label: 'File',
+        submenu: [
+            { role: 'close' }
+        ]
+    },
+    {
+        label: 'Edit',
+        submenu: [
+            { role: 'undo' },
+            { role: 'redo' },
+            { type: 'separator' },
+            { role: 'cut' },
+            { role: 'copy' },
+            { role: 'paste' },
+            { role: 'pasteAndMatchStyle' },
+            { role: 'delete' },
+            { role: 'selectAll' }
+        ]
+    },
+    {
+        label: 'View',
+        submenu: [
+            { role: 'reload' },
+            { role: 'forceReload' },
+            { role: 'toggleDevTools' },
+            { type: 'separator' },
+            { role: 'resetZoom' },
+            { role: 'zoomIn' },
+            { role: 'zoomOut' },
+            { type: 'separator' },
+            { role: 'togglefullscreen' }
+        ]
+    },
+    {
+        label: 'Window',
+        submenu: [
+            { role: 'minimize' },
+            { role: 'zoom' },
+            ...(process.platform === 'darwin' ? [
+                { type: 'separator' },
+                { role: 'front' },
+                { type: 'separator' },
+                { role: 'window' }
+            ] : [
+                { role: 'close' }
+            ])
+        ]
+    }
+];
+const menu = electron_2.Menu.buildFromTemplate(template);
+electron_2.Menu.setApplicationMenu(menu);
 // Check if running in development mode
 const isDev = process.env.NODE_ENV === 'development' || !electron_1.app.isPackaged && process.argv.includes('--dev');
 let apiPort = 3001;
@@ -150,16 +216,27 @@ electron_1.app.on("ready", async () => {
                 return { success: true };
             }
         }
+        if (appName === 'antigravity') {
+            if (openInEditor(['antigravity']))
+                return { success: true };
+            // Fallback for macOS if installed as an app bundle
+            if (process.platform === 'darwin') {
+                (0, child_process_1.spawn)('open', ['-a', 'Antigravity', '--args', '-g', `${targetPath}:${line || 1}`]);
+                return { success: true };
+            }
+        }
         // Auto-detection logic (if appName not specified but line provided)
         if (line !== undefined && line !== null && !appName) {
-            // Default priority: Cursor -> VS Code -> System
+            // Default priority: Antigravity -> Cursor -> VS Code -> System
+            if (openInEditor(['antigravity']))
+                return { success: true };
             if (openInEditor(['cursor']))
                 return { success: true };
             if (openInEditor(['code']))
                 return { success: true };
             if (process.platform === 'darwin') {
-                // Try opening VS Code blindly
-                (0, child_process_1.spawn)('open', ['-a', 'Visual Studio Code', '--args', '-g', `${targetPath}:${line}`]);
+                // Try opening Antigravity widely
+                (0, child_process_1.spawn)('open', ['-a', 'Antigravity', '--args', '-g', `${targetPath}:${line}`]);
             }
             // Proceed to fallback
         }
