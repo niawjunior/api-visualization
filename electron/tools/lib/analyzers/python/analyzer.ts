@@ -23,6 +23,15 @@ interface PythonRoute {
     full_path: string;
     request_schema: PythonSchemaField[];
     response_schema: PythonSchemaField[];
+    dependencies?: {
+        services: any[];
+        database: any[];
+        external: any[];
+        utilities: any[];
+        grouped: any[];
+        tables: string[];
+        apiCalls: string[];
+    };
 }
 
 export async function analyzePythonEndpoints(
@@ -30,35 +39,17 @@ export async function analyzePythonEndpoints(
     config?: ApiVizConfig
 ): Promise<ApiEndpoint[]> {
     return new Promise((resolve, reject) => {
-        // Use the actual script file
-        // In dev: inside scripts folder. In prod: need to ensure it's unpacked or resolve correctly.
-        // Assuming standard structure: ./scripts/scanner.py relative to this file
-        
-        // This file is in .../analyzers/python/analyzer.ts (compiled to .js)
-        // script is in .../analyzers/python/scripts/scanner.py
-        
-        // We now have a 'scanner' package directory at `.../analyzers/python/scanner`
-        // We want to run `python3 -m scanner <path>` but we need to set PYTHONPATH to the parent dir of 'scanner'
-        
-        const scannerPackageDir = path.join(__dirname, 'scanner');
-        const parentDir = path.dirname(scannerPackageDir); 
-        
-        // OR simply run the __main__.py directly? 
-        // python3 electron/tools/lib/analyzers/python/scanner/__main__.py <path>
-        // But doing `python3 -m scanner` is cleaner if we set PYTHONPATH.
-        
-        // Let's rely on running __main__.py directly for simplicity in spawning, 
-        // BUT we must set PYTHONPATH so imports like `from .core import ...` work? 
-        // Actually, relative imports in __main__ require -m execution.
-        
         // Correct approach: `python3 -m scanner <projectPath>`
         // CWD should be the parent directory: `electron/tools/lib/analyzers/python`
         
         const analyzersDir = path.join(__dirname); 
         // We expect `scanner` folder to be in `analyzersDir`.
         
-        if (!fs.existsSync(path.join(analyzersDir, 'scanner', '__main__.py'))) {
-             console.error(`[PythonAnalyzer] Scanner package not found at: ${path.join(analyzersDir, 'scanner')}`);
+        // Check for scanner directory existence
+        const mainScannerPath = path.join(analyzersDir, 'scanner', '__main__.py');
+
+        if (!fs.existsSync(mainScannerPath)) {
+             console.error(`[PythonAnalyzer] Scanner package not found at: ${mainScannerPath}`);
              resolve([]);
              return;
         }
@@ -70,7 +61,6 @@ export async function analyzePythonEndpoints(
         };
 
         console.log(`[PythonAnalyzer] Spawning scanner: python3 -m scanner ${projectPath}`);
-        console.log(`[PythonAnalyzer] CWD: ${analyzersDir}`);
         
         const pythonProcess = spawn('python3', ['-m', 'scanner', projectPath], { 
             env,
@@ -89,8 +79,6 @@ export async function analyzePythonEndpoints(
         });
 
         pythonProcess.on('close', (code) => {
-            // No cleanup needed for existing script file
-
             if (code !== 0) {
                 console.error(`[PythonAnalyzer] Scanner failed (code ${code}): ${stderrData}`);
                 resolve([]);
@@ -111,11 +99,16 @@ export async function analyzePythonEndpoints(
                 
                 const jsonStr = stdoutData.substring(jsonStart, jsonEnd + 1);
                 const rawRoutes: PythonRoute[] = JSON.parse(jsonStr);
-                
                 const endpoints = mapToApiEndpoints(rawRoutes, projectPath);
+                
+                // Clean up debug logs - keep errors
+                if (endpoints.length === 0 && rawRoutes.length > 0) {
+                     console.warn(`[PythonAnalyzer] Warning: Routes parsed (${rawRoutes.length}) but 0 endpoints mapped.`);
+                }
+
                 resolve(endpoints);
                 
-            } catch (e) {
+            } catch (e: any) {
                 console.error("[PythonAnalyzer] Failed to parse Python scanner output:", e);
                 console.error("Stdout was:", stdoutData);
                 resolve([]);
@@ -133,6 +126,18 @@ function mapToApiEndpoints(routes: PythonRoute[], projectPath: string): ApiEndpo
     const endpointMap = new Map<string, ApiEndpoint>();
     
     for (const route of routes) {
+        // Determine correct file path and relative path
+        let filePath = route.file_path;
+        let relativePath = route.file_path;
+
+        if (path.isAbsolute(route.file_path)) {
+            filePath = route.file_path;
+            relativePath = path.relative(projectPath, route.file_path);
+        } else {
+            filePath = path.join(projectPath, route.file_path);
+            relativePath = route.file_path; // Assuming it comes relative
+        }
+
         // Normalize path
         let normalizedPath = route.full_path;
         if (!normalizedPath.startsWith('/')) {
@@ -169,16 +174,24 @@ function mapToApiEndpoints(routes: PythonRoute[], projectPath: string): ApiEndpo
                     name: f.name,
                     type: f.type,
                     required: f.required,
-                    optional: !f.required // Add missing property
+                    optional: !f.required
                 })) || [],
                 responseBody: route.response_schema?.map(f => ({
                     name: f.name,
                     type: f.type,
                     required: f.required,
-                    optional: !f.required // Add missing property
+                    optional: !f.required,
                 })) || [],
-                responses: [],
-                dependencies: {
+                responses: [], // Python scanner doesn't parse response codes deeply usage yet
+                dependencies: route.dependencies ? {
+                    services: route.dependencies.services || [],
+                    database: route.dependencies.database || [],
+                    external: route.dependencies.external || [],
+                    utilities: route.dependencies.utilities || [],
+                    grouped: route.dependencies.grouped || [], 
+                    tables: route.dependencies.tables || [],
+                    apiCalls: route.dependencies.apiCalls || []
+                } : {
                     services: [],
                     database: [],
                     external: [],
@@ -187,8 +200,8 @@ function mapToApiEndpoints(routes: PythonRoute[], projectPath: string): ApiEndpo
                     tables: [],
                     apiCalls: []
                 },
-                filePath: path.join(projectPath, route.file_path),
-                relativePath: route.file_path,
+                filePath: filePath,
+                relativePath: relativePath,
                 lineNumber: route.lineno
             };
             

@@ -28,8 +28,10 @@ async function analyzePythonEndpoints(projectPath, config) {
         // CWD should be the parent directory: `electron/tools/lib/analyzers/python`
         const analyzersDir = path_1.default.join(__dirname);
         // We expect `scanner` folder to be in `analyzersDir`.
-        if (!fs_1.default.existsSync(path_1.default.join(analyzersDir, 'scanner', '__main__.py'))) {
-            console.error(`[PythonAnalyzer] Scanner package not found at: ${path_1.default.join(analyzersDir, 'scanner')}`);
+        // Check for scanner directory existence
+        const mainScannerPath = path_1.default.join(analyzersDir, 'scanner', '__main__.py');
+        if (!fs_1.default.existsSync(mainScannerPath)) {
+            console.error(`[PythonAnalyzer] Scanner package not found at: ${mainScannerPath}`);
             resolve([]);
             return;
         }
@@ -39,7 +41,6 @@ async function analyzePythonEndpoints(projectPath, config) {
             PATH: `/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${process.env.PATH || ''}`
         };
         console.log(`[PythonAnalyzer] Spawning scanner: python3 -m scanner ${projectPath}`);
-        console.log(`[PythonAnalyzer] CWD: ${analyzersDir}`);
         const pythonProcess = (0, child_process_1.spawn)('python3', ['-m', 'scanner', projectPath], {
             env,
             cwd: analyzersDir // Execute from the folder containing 'scanner' package
@@ -53,7 +54,6 @@ async function analyzePythonEndpoints(projectPath, config) {
             stderrData += data.toString();
         });
         pythonProcess.on('close', (code) => {
-            // No cleanup needed for existing script file
             if (code !== 0) {
                 console.error(`[PythonAnalyzer] Scanner failed (code ${code}): ${stderrData}`);
                 resolve([]);
@@ -73,6 +73,10 @@ async function analyzePythonEndpoints(projectPath, config) {
                 const jsonStr = stdoutData.substring(jsonStart, jsonEnd + 1);
                 const rawRoutes = JSON.parse(jsonStr);
                 const endpoints = mapToApiEndpoints(rawRoutes, projectPath);
+                // Clean up debug logs - keep errors
+                if (endpoints.length === 0 && rawRoutes.length > 0) {
+                    console.warn(`[PythonAnalyzer] Warning: Routes parsed (${rawRoutes.length}) but 0 endpoints mapped.`);
+                }
                 resolve(endpoints);
             }
             catch (e) {
@@ -90,6 +94,17 @@ async function analyzePythonEndpoints(projectPath, config) {
 function mapToApiEndpoints(routes, projectPath) {
     const endpointMap = new Map();
     for (const route of routes) {
+        // Determine correct file path and relative path
+        let filePath = route.file_path;
+        let relativePath = route.file_path;
+        if (path_1.default.isAbsolute(route.file_path)) {
+            filePath = route.file_path;
+            relativePath = path_1.default.relative(projectPath, route.file_path);
+        }
+        else {
+            filePath = path_1.default.join(projectPath, route.file_path);
+            relativePath = route.file_path; // Assuming it comes relative
+        }
         // Normalize path
         let normalizedPath = route.full_path;
         if (!normalizedPath.startsWith('/')) {
@@ -122,16 +137,24 @@ function mapToApiEndpoints(routes, projectPath) {
                     name: f.name,
                     type: f.type,
                     required: f.required,
-                    optional: !f.required // Add missing property
+                    optional: !f.required
                 })) || [],
                 responseBody: route.response_schema?.map(f => ({
                     name: f.name,
                     type: f.type,
                     required: f.required,
-                    optional: !f.required // Add missing property
+                    optional: !f.required,
                 })) || [],
-                responses: [],
-                dependencies: {
+                responses: [], // Python scanner doesn't parse response codes deeply usage yet
+                dependencies: route.dependencies ? {
+                    services: route.dependencies.services || [],
+                    database: route.dependencies.database || [],
+                    external: route.dependencies.external || [],
+                    utilities: route.dependencies.utilities || [],
+                    grouped: route.dependencies.grouped || [],
+                    tables: route.dependencies.tables || [],
+                    apiCalls: route.dependencies.apiCalls || []
+                } : {
                     services: [],
                     database: [],
                     external: [],
@@ -140,8 +163,8 @@ function mapToApiEndpoints(routes, projectPath) {
                     tables: [],
                     apiCalls: []
                 },
-                filePath: path_1.default.join(projectPath, route.file_path),
-                relativePath: route.file_path,
+                filePath: filePath,
+                relativePath: relativePath,
                 lineNumber: route.lineno
             };
             // Extract route params (e.g. /users/{id})

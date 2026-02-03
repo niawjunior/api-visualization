@@ -2,6 +2,9 @@ import ast
 from typing import Set, List, Optional
 from .models import FileData, SchemaField, RouteDef, RouterDef, IncludeDef
 from ..adapters.base import BaseAdapter
+import os
+
+
 
 class ImportVisitor(ast.NodeVisitor):
     """
@@ -124,6 +127,10 @@ class ASTVisitor(ImportVisitor):
                       
                       # Context for dependency analysis
                       self.current_route = route
+                      
+                      # Analyze Function Parameters for Dependency Injection
+                      self._process_function_deps(node)
+
                       self.generic_visit(node)
                       self.current_route = None
                       return
@@ -177,6 +184,29 @@ class ASTVisitor(ImportVisitor):
         self.generic_visit(node)
 
     def _analyze_dependency(self, node, fname):
+        # 1. Explicit Depends(...) support
+        is_depends = fname == "Depends" or fname.endswith(".Depends")
+        if is_depends and node.args:
+            # Extract the inner dependency
+            inner = node.args[0]
+            dep_name = ""
+            if isinstance(inner, ast.Call):
+                dep_name = self._get_func_name(inner.func)
+            elif isinstance(inner, (ast.Name, ast.Attribute)):
+                dep_name = self._expression_to_str(inner)
+            
+            if dep_name:
+                # Classify based on name, default to "services"
+                cat = "services"
+                if any(x in dep_name.lower() for x in ["db", "session", "repo", "database"]):
+                    cat = "database"
+                
+                # Use module name as label if possible
+                mod = dep_name.split('.')[0] if '.' in dep_name else "Dependencies"
+                
+                self._add_dep(cat, mod, dep_name)
+                return
+
         is_db = ("session" in fname or "db" in fname or "repo" in fname) and \
                 any(x in fname for x in ["exec", "add", "commit", "query", "get", "flush", "refresh"])
         if fname in ["select", "update", "delete", "insert"]: is_db = True
@@ -244,6 +274,68 @@ class ASTVisitor(ImportVisitor):
                   return self._get_base_type_name(first)
              return val
         return ""
+    
+    def _process_function_deps(self, func_node):
+        """
+        Scans function arguments for Depends() usage, either as default values or within Annotated.
+        """
+        for arg in func_node.args.args:
+            # 1. Defaults: param: Type = Depends(dep)
+            # Defaults are stored in separate list matching args from end, but let's check AST matching if possible.
+            # Actually simplest way is iterating defaults if we could map them, but defaults list is offset.
+            # However, looking at Annotated is more reliable for modern FastAPI.
+            
+            # 2. Annotated: param: Annotated[Type, Depends(dep)]
+            if arg.annotation:
+                 self._check_annotated_dependency(arg.annotation)
+
+        # Also check default values explicitly (defaults list matches last n args)
+        if func_node.args.defaults:
+            for d in func_node.args.defaults:
+                self._check_depends_call(d)
+
+    def _check_annotated_dependency(self, node):
+        if not isinstance(node, ast.Subscript): return
+        
+        base = self._get_base_type_name(node.value)
+        
+        # Handle Optional[Annotated[...]] or List[Annotated[...]] recursion
+        if base in ['Optional', 'List', 'Union', 'Iterable', 'Sequence']:
+            sl = node.slice
+            if hasattr(ast, 'Index') and isinstance(sl, ast.Index): sl = sl.value
+            
+            if isinstance(sl, ast.Tuple):
+                for elt in sl.elts:
+                    self._check_annotated_dependency(elt)
+            else:
+                 self._check_annotated_dependency(sl)
+            return
+
+        # Check for Annotated (allow typing.Annotated etc)
+        if base == 'Annotated' or base.endswith('.Annotated'):
+            sl = node.slice
+            # Annotated[Type, Dep1, Dep2]
+            
+            items = []
+            if hasattr(ast, 'Index') and isinstance(sl, ast.Index): sl = sl.value
+            
+            if isinstance(sl, ast.Tuple):
+                items = sl.elts
+            else:
+                items = [sl]
+            
+            # Skip the first item (the Type)
+            for item in items[1:]:
+                self._check_depends_call(item)
+
+    def _check_depends_call(self, node):
+        if not isinstance(node, ast.Call): return
+        
+        fname = self._get_func_name(node.func)
+        if fname == "Depends" or fname.endswith(".Depends"):
+             if node.args:
+                 # It's a Depends(dependency) call
+                 self._analyze_dependency(node, fname)
     
     def _extract_kwarg(self, node, name, default):
         for k in node.keywords:

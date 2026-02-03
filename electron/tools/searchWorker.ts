@@ -33,9 +33,36 @@ parentPort?.on('message', async (task) => {
             const results = await detectProject(task.payload.path);
             parentPort?.postMessage({ type: 'success', results });
         } else if (task.type === 'analyze-route') {
-            const { analyzeRouteFile } = await import('./lib/analyzers/nextjs');
-            const results = analyzeRouteFile(task.payload.path);
-            parentPort?.postMessage({ type: 'success', results });
+            const filePath = task.payload.path;
+
+
+            if (filePath.endsWith('.py')) {
+                 const { analyzePythonEndpoints } = await import('./lib/analyzers/python/analyzer');
+                 
+                 const dir = path.dirname(filePath);
+                 
+                 // Run scanner on the directory of the file
+                 const endpoints = await analyzePythonEndpoints(dir);
+                 
+                 // Find the specific endpoint that matches the file
+                 let match = endpoints.find(e => e.filePath === filePath);
+                 
+                 // Robust matching fallback
+                 if (!match) {
+                     try {
+                         const normalizedTarget = path.normalize(filePath).toLowerCase();
+                         match = endpoints.find(e => path.normalize(e.filePath).toLowerCase() === normalizedTarget);
+                     } catch (e) {}
+                 }
+
+
+                 
+                 parentPort?.postMessage({ type: 'success', results: match || null }); // Return single object
+            } else {
+                const { analyzeRouteFile } = await import('./lib/analyzers/nextjs');
+                const results = analyzeRouteFile(filePath);
+                parentPort?.postMessage({ type: 'success', results });
+            }
         }
     } catch (error: any) {
         parentPort?.postMessage({ type: 'error', error: error.message });

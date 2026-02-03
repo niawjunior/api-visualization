@@ -75,9 +75,52 @@ worker_threads_1.parentPort?.on('message', async (task) => {
             worker_threads_1.parentPort?.postMessage({ type: 'success', results });
         }
         else if (task.type === 'analyze-route') {
-            const { analyzeRouteFile } = await Promise.resolve().then(() => __importStar(require('./lib/analyzers/nextjs')));
-            const results = analyzeRouteFile(task.payload.path);
-            worker_threads_1.parentPort?.postMessage({ type: 'success', results });
+            const filePath = task.payload.path;
+            // IMMEDIATE DEBUG LOG
+            try {
+                const fs = require('fs');
+                fs.appendFileSync('/Users/niawjunior/Desktop/api-visualization/worker_debug_source.log', `\n[START] Analyze Route: ${filePath}\n`);
+            }
+            catch (e) {
+                console.error('Log Write Failed', e);
+            }
+            if (filePath.endsWith('.py')) {
+                const { analyzePythonEndpoints } = await Promise.resolve().then(() => __importStar(require('./lib/analyzers/python/analyzer')));
+                const dir = path_1.default.dirname(filePath);
+                // Run scanner on the directory of the file
+                const endpoints = await analyzePythonEndpoints(dir);
+                // Find the specific endpoint that matches the file
+                let match = endpoints.find(e => e.filePath === filePath);
+                // Robust matching fallback
+                if (!match) {
+                    try {
+                        const normalizedTarget = path_1.default.normalize(filePath).toLowerCase();
+                        match = endpoints.find(e => path_1.default.normalize(e.filePath).toLowerCase() === normalizedTarget);
+                    }
+                    catch (e) { }
+                }
+                // Debug Logger (Sync)
+                try {
+                    const fs = require('fs');
+                    const logPath = '/Users/niawjunior/Desktop/api-visualization/worker_debug_source.log';
+                    const logData = [
+                        `[Result] Target: ${filePath}`,
+                        `Endpoints Found: ${endpoints.length}`,
+                        ...endpoints.map((e) => ` - Candidate: ${e.filePath} (Match: ${e.filePath === filePath})`),
+                        `Match Result: ${match ? 'FOUND' : 'MISSING'}\n`
+                    ].join('\n');
+                    fs.appendFileSync(logPath, logData);
+                }
+                catch (e) {
+                    console.error('Worker Log Error:', e);
+                }
+                worker_threads_1.parentPort?.postMessage({ type: 'success', results: match || null }); // Return single object
+            }
+            else {
+                const { analyzeRouteFile } = await Promise.resolve().then(() => __importStar(require('./lib/analyzers/nextjs')));
+                const results = analyzeRouteFile(filePath);
+                worker_threads_1.parentPort?.postMessage({ type: 'success', results });
+            }
         }
     }
     catch (error) {
