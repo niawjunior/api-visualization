@@ -13,6 +13,7 @@ import ApiDependencyGraph from './ApiDependencyGraph';
 interface ApiExplorerProps {
     currentPath: string;
     onOpenFile?: (path: string, line?: number, app?: string) => void;
+    headerRight?: React.ReactNode;
 }
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
@@ -57,7 +58,7 @@ interface LocalApiEndpoint {
 
 const ALL_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 
-export function ApiExplorer({ currentPath, onOpenFile }: ApiExplorerProps) {
+export function ApiExplorer({ currentPath, onOpenFile, headerRight }: ApiExplorerProps) {
     const [endpoints, setEndpoints] = useState<LocalApiEndpoint[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -155,7 +156,7 @@ export function ApiExplorer({ currentPath, onOpenFile }: ApiExplorerProps) {
         <div className="h-full flex flex-col bg-background">
             {/* Premium Header */}
             <div className="shrink-0 border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
-                <div className="max-w-4xl mx-auto p-6 space-y-6">
+                <div className="p-6 space-y-6">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <div className="p-2.5 bg-primary/5 rounded-xl border border-primary/10 shadow-sm">
@@ -170,16 +171,24 @@ export function ApiExplorer({ currentPath, onOpenFile }: ApiExplorerProps) {
                                 )}
                             </div>
                         </div>
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={loadEndpoints} 
-                            disabled={loading}
-                            className="h-9 gap-2 shadow-sm border-border/60 hover:bg-muted/50"
-                        >
-                            <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
-                            Refresh
-                        </Button>
+                        <div className="flex items-center gap-3">
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={loadEndpoints} 
+                                disabled={loading}
+                                className="h-9 gap-2 shadow-sm border-border/60 hover:bg-muted/50"
+                            >
+                                <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+                                Refresh
+                            </Button>
+                            
+                            {headerRight && (
+                                <div className="pl-3 border-l border-border/60">
+                                    {headerRight}
+                                </div>
+                            )}
+                        </div>
                     </div>
                     
                     {/* Search & Filters Row */}
@@ -226,7 +235,7 @@ export function ApiExplorer({ currentPath, onOpenFile }: ApiExplorerProps) {
             
             {/* Content Area */}
             <div className="flex-1 overflow-auto scroll-smooth">
-                <div className="max-w-4xl mx-auto p-6 pb-20">
+                <div className="p-6 pb-20">
                 {loading ? (
                     <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-4 py-20">
                         <div className="p-4 rounded-full bg-muted/20 animate-pulse">

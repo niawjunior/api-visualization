@@ -139,33 +139,34 @@ function VisualProjectMapContent({ files, currentPath, detectedProject, onNaviga
 
   // API Mode: Render ApiExplorer instead of ReactFlow (full-screen, seamless)
   if (viewMode === 'api') {
-    return (
-      <div className="w-full h-full bg-background relative">
-        {/* Compact Mode Toggle - top right */}
-        <div className="absolute top-4 right-4 z-20 flex items-center gap-2 p-2 bg-card/90 backdrop-blur-sm border border-border rounded-lg shadow-sm">
+    const viewSwitcher = (
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setViewMode('structure')}
-            className="px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            className="px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
           >
             Structure
           </button>
           {canShowDependencies && (
             <button
               onClick={() => setViewMode('dependencies')}
-              className="px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+              className="px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
             >
               Deps
             </button>
           )}
-          <span className="px-2.5 py-1.5 text-xs font-medium bg-primary/10 text-primary rounded-md">
+          <span className="px-2.5 py-1 text-xs font-medium bg-primary/10 text-primary rounded-md">
             API
           </span>
         </div>
-        
-        {/* Full-screen ApiExplorer */}
+    );
+
+    return (
+      <div className="w-full h-full bg-background relative">
         <ApiExplorer 
           currentPath={projectRootPath}
           onOpenFile={onOpenFile}
+          headerRight={viewSwitcher}
         />
       </div>
     );
