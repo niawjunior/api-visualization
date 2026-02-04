@@ -12,6 +12,8 @@ import ApiDependencyGraph from './ApiDependencyGraph';
 
 import { DependencyFilter, DependencyOption } from './DependencyFilter';
 import { LocalApiEndpoint, DependencyInfo, HttpMethod } from './types';
+import { ApiSettingsProvider } from './ApiSettingsContext';
+import { ApiSettingsDialog } from './ApiSettingsDialog';
 
 interface ApiExplorerProps {
     currentPath: string;
@@ -150,7 +152,8 @@ export function ApiExplorer({ currentPath, onOpenFile, headerRight }: ApiExplore
     };
     
     return (
-        <div className="h-full flex flex-col bg-background">
+        <ApiSettingsProvider>
+            <div className="h-full flex flex-col bg-background">
             {/* Premium Header */}
             <div className="shrink-0 border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-30">
                 <div className="p-6 space-y-6">
@@ -180,6 +183,8 @@ export function ApiExplorer({ currentPath, onOpenFile, headerRight }: ApiExplore
                                 Refresh
                             </Button>
                             
+                            <ApiSettingsDialog />
+
                             {headerRight && (
                                 <div className="pl-3 border-l border-border/60">
                                     {headerRight}
@@ -335,5 +340,6 @@ export function ApiExplorer({ currentPath, onOpenFile, headerRight }: ApiExplore
                 )}
             </AnimatePresence>
         </div>
+        </ApiSettingsProvider>
     );
 }

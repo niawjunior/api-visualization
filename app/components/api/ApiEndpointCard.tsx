@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronRight, Copy, Check, FileCode, ExternalLink, GitBranch, Monitor, Code } from 'lucide-react';
+import { ChevronDown, ChevronRight, Copy, Check, FileCode, ExternalLink, GitBranch, Monitor, Code, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ApiMethodBadge } from './ApiMethodBadge';
+import { InteractiveConsole } from './InteractiveConsole';
 
 import { LocalApiEndpoint, SchemaField } from './types';
 
@@ -156,6 +157,7 @@ function SchemaTree({ fields, level = 0 }: { fields: SchemaField[]; level?: numb
 
 export function ApiEndpointCard({ endpoint, isExpanded, onToggle, onOpenFile, onViewDependencies }: ApiEndpointCardProps) {
     const [copied, setCopied] = useState(false);
+    const [isConsoleOpen, setIsConsoleOpen] = useState(false);
     
     const generateCurl = () => {
         const method = endpoint.methods[0] || 'GET';
@@ -232,6 +234,19 @@ export function ApiEndpointCard({ endpoint, isExpanded, onToggle, onOpenFile, on
                                     {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
                                     {copied ? 'Copied' : 'Copy cURL'}
                                 </button>
+
+                                <button
+                                    onClick={() => setIsConsoleOpen(!isConsoleOpen)}
+                                    className={cn(
+                                        "flex items-center gap-2 px-3 py-1.5 text-xs font-medium border rounded-md transition-all shadow-sm",
+                                        isConsoleOpen 
+                                            ? "bg-amber-100/50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-900/40"
+                                            : "bg-background border-border/60 hover:border-primary/30 hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                                    )}
+                                >
+                                    <Zap className={cn("w-3.5 h-3.5", isConsoleOpen && "fill-current")} />
+                                    Try it out
+                                </button>
                                 
                                 {endpoint.functionName && (
                                     <div className="flex items-center gap-2 px-3 py-1.5 text-xs bg-muted/50 border border-border/60 rounded-md group/func">
@@ -261,6 +276,20 @@ export function ApiEndpointCard({ endpoint, isExpanded, onToggle, onOpenFile, on
                                     )}
                                 </div>
                             </div>
+                            
+                            {/* Interactive Console */}
+                            <AnimatePresence>
+                                {isConsoleOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                                        animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
+                                        exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                                        className="overflow-hidden"
+                                    >
+                                        <InteractiveConsole endpoint={endpoint} />
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                             
                             {/* Parameters */}
                             {endpoint.params.length > 0 && (
