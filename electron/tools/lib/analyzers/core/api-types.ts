@@ -90,6 +90,7 @@ export interface ApiEndpoint {
     filePath: string;
     relativePath: string;
     lineNumber: number;
+    functionName?: string;
     description?: string;
 }
 

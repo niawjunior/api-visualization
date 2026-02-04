@@ -20,6 +20,7 @@ export interface EndpointSummary {
   path: string;
   methods: string[];
   filePath?: string;
+  functionName?: string;
   dependencies?: ApiDependencies;
 }
 

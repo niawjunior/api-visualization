@@ -100,7 +100,7 @@ class ASTVisitor(ImportVisitor):
                       fname = self._get_func_name(decorator.func)
                       if '.' in fname: router_var = fname.split('.')[0]
                       
-                      route = RouteDef(path, method, router_var, node.lineno, self.data.file_path)
+                      route = RouteDef(path, method, router_var, node.lineno, self.data.file_path, function_name=node.name)
                       
                       # Request Body (Generic)
                       SPECIAL_TYPES = {'Request', 'Response', 'BackgroundTasks', 'Session', 'AsyncSession', 'HTTPConnection', 'WebSocket', 'HTTPException'}

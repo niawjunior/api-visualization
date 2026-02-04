@@ -21,6 +21,7 @@ interface PythonRoute {
     lineno: number;
     file_path: string;
     full_path: string;
+    function_name?: string;
     request_schema: PythonSchemaField[];
     response_schema: PythonSchemaField[];
     dependencies?: {
@@ -202,7 +203,8 @@ function mapToApiEndpoints(routes: PythonRoute[], projectPath: string): ApiEndpo
                 },
                 filePath: filePath,
                 relativePath: relativePath,
-                lineNumber: route.lineno
+                lineNumber: route.lineno,
+                functionName: route.function_name
             };
             
             // Extract route params (e.g. /users/{id})

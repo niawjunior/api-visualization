@@ -6,9 +6,10 @@ class SchemaField:
     def to_dict(self): return {"name": self.name, "type": self.type_name, "required": self.required}
 
 class RouteDef:
-    def __init__(self, path: str, method: str, router_var: str, lineno: int, file_path: str):
+    def __init__(self, path: str, method: str, router_var: str, lineno: int, file_path: str, function_name: str = None):
         self.path = path; self.method = method; self.router_var = router_var
         self.lineno = lineno; self.file_path = file_path; self.full_path = ""
+        self.function_name = function_name
         self.dependencies = {"services": [], "database": [], "external": [], "utilities": [], "tables": [], "apiCalls": []}
         self.request_schema: List[SchemaField] = []; self.response_schema: List[SchemaField] = []
         self.request_model_name: Optional[str] = None; self.response_model_name: Optional[str] = None
@@ -17,6 +18,7 @@ class RouteDef:
         return {
             "path": self.path, "method": self.method, "router_var": self.router_var,
             "lineno": self.lineno, "file_path": self.file_path, "full_path": self.full_path or self.path,
+            "function_name": self.function_name,
             "dependencies": self.dependencies,
             "request_schema": [f.to_dict() for f in self.request_schema],
             "response_schema": [f.to_dict() for f in self.response_schema]

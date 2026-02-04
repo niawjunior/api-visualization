@@ -51,6 +51,7 @@ interface LocalApiEndpoint {
     filePath: string;
     relativePath: string;
     lineNumber: number;
+    functionName?: string;
     description?: string;
 }
 

@@ -151,6 +151,7 @@ interface ApiEndpointCardProps {
         filePath: string;
         relativePath: string;
         lineNumber: number;
+        functionName?: string;
         description?: string;
     };
     isExpanded?: boolean;
@@ -245,7 +246,7 @@ export function ApiEndpointCard({ endpoint, isExpanded, onToggle, onOpenFile, on
                     >
                         <div className="p-4 space-y-4">
                             {/* Actions */}
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <button
                                     onClick={handleCopy}
                                     className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-muted hover:bg-muted/80 rounded-md transition-colors"
@@ -254,6 +255,13 @@ export function ApiEndpointCard({ endpoint, isExpanded, onToggle, onOpenFile, on
                                     {copied ? 'Copied!' : 'Copy cURL'}
                                 </button>
                                 
+                                {endpoint.functionName && (
+                                    <div className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-muted border border-border/50 rounded-md font-mono text-muted-foreground mr-1">
+                                        <Code className="w-3 h-3 opacity-70" />
+                                        <span className="select-all font-semibold text-foreground/80">{endpoint.functionName}</span>
+                                    </div>
+                                )}
+
                                     <EditorSelector 
                                         path={endpoint.filePath} 
                                         line={endpoint.lineNumber} 
@@ -278,8 +286,8 @@ export function ApiEndpointCard({ endpoint, isExpanded, onToggle, onOpenFile, on
                                     <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
                                         Route Parameters
                                     </h4>
-                                    <div className="bg-muted/30 rounded-md p-3">
-                                        <table className="w-full text-xs">
+                                    <div className="bg-muted/30 rounded-md p-3 overflow-x-auto">
+                                        <table className="w-full text-xs min-w-[300px]">
                                             <thead>
                                                 <tr className="text-muted-foreground">
                                                     <th className="text-left font-medium pb-2">Name</th>
@@ -307,7 +315,7 @@ export function ApiEndpointCard({ endpoint, isExpanded, onToggle, onOpenFile, on
                                     <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
                                         Request Body
                                     </h4>
-                                    <div className="bg-muted/30 rounded-md p-3">
+                                    <div className="bg-muted/30 rounded-md p-3 overflow-x-auto">
                                         <SchemaTree fields={endpoint.requestBody} />
                                     </div>
                                 </div>
@@ -329,7 +337,7 @@ export function ApiEndpointCard({ endpoint, isExpanded, onToggle, onOpenFile, on
                                                 </span>
                                                 {response.isError ? 'Error Response' : 'Success Response'}
                                             </h4>
-                                            <div className="bg-muted/30 rounded-md p-3">
+                                            <div className="bg-muted/30 rounded-md p-3 overflow-x-auto">
                                                 <SchemaTree fields={response.schema} />
                                             </div>
                                         </div>
@@ -340,7 +348,7 @@ export function ApiEndpointCard({ endpoint, isExpanded, onToggle, onOpenFile, on
                                     <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
                                         Response Schema
                                     </h4>
-                                    <div className="bg-muted/30 rounded-md p-3">
+                                    <div className="bg-muted/30 rounded-md p-3 overflow-x-auto">
                                         <SchemaTree fields={endpoint.responseBody} />
                                     </div>
                                 </div>
