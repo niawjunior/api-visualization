@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { FileExplorer, FileEntry } from './file-browser/FileExplorer';
 import VisualProjectMap from './visual/VisualProjectMap';
 import { useProjectDetection } from './hooks/useProjectDetection';
+import { useRecentProjects } from './hooks/useRecentProjects';
 import { Button } from '@/components/ui/button';
-import { FolderOpen } from 'lucide-react';
+import { FolderOpen, Clock, X, Folder } from 'lucide-react';
 
 export default function MainInterface() {
   // Project State
@@ -14,16 +15,25 @@ export default function MainInterface() {
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Recent projects
+  const { recentProjects, addRecentProject, removeRecentProject } = useRecentProjects();
+
   // Project detection for view mode capabilities
   const { detectedProject } = useProjectDetection(projectRoot);
 
-  // Handle opening a new project
+  // Open a project (from dialog or recent)
+  const openProject = useCallback((path: string) => {
+    setProjectRoot(path);
+    setCurrentPath(path);
+    addRecentProject(path);
+  }, [addRecentProject]);
+
+  // Handle opening a new project via dialog
   const handleOpenProject = async () => {
     if (!window.electron) return;
     const selectedPath = await window.electron.selectDirectory();
     if (selectedPath) {
-      setProjectRoot(selectedPath);
-      setCurrentPath(selectedPath);
+      openProject(selectedPath);
     }
   };
 
@@ -76,7 +86,7 @@ export default function MainInterface() {
   // 1. Entry Screen (No Project Open)
   if (!projectRoot) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center bg-background gap-6 p-8">
+      <div className="h-full w-full flex flex-col items-center justify-center bg-background gap-8 p-8">
         <div className="text-center space-y-2">
           <FolderOpen className="w-16 h-16 mx-auto text-muted-foreground/30" />
           <h1 className="text-2xl font-bold tracking-tight">API Visualization</h1>
@@ -84,10 +94,46 @@ export default function MainInterface() {
             Open a project folder to start exploring its API endpoints.
           </p>
         </div>
+        
         <Button size="lg" onClick={handleOpenProject} className="gap-2">
           <FolderOpen className="w-5 h-5" />
           Open Project
         </Button>
+
+        {/* Recent Projects */}
+        {recentProjects.length > 0 && (
+          <div className="w-full max-w-sm mt-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+              <Clock className="w-3.5 h-3.5" />
+              <span className="font-medium uppercase tracking-wider">Recent Projects</span>
+            </div>
+            <div className="space-y-1">
+              {recentProjects.map((project) => (
+                <div
+                  key={project.path}
+                  className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => openProject(project.path)}
+                >
+                  <Folder className="w-4 h-4 text-blue-500 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{project.name}</p>
+                    <p className="text-[10px] text-muted-foreground truncate font-mono">{project.path}</p>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeRecentProject(project.path);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-all"
+                    title="Remove from recents"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
