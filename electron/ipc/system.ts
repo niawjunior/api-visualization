@@ -54,9 +54,11 @@ export function registerSystemHandlers() {
   
         if (appName === 'antigravity') {
             if (openInEditor(['antigravity'])) return { success: true };
+            if (openInEditor(['agy'])) return { success: true };
+            
             // Fallback for macOS if installed as an app bundle
              if (process.platform === 'darwin') {
-                // Try simpler open command first which is more robust for Electron apps
+                // Revert to simple open to ensure file opens (args might be failing if app not running or specific version)
                 spawn('open', ['-a', 'Antigravity', targetPath]);
                 return { success: true };
             }
