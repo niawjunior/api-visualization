@@ -15,7 +15,7 @@ const envPath = app.isPackaged
 dotenv.config({ path: envPath });
 
 // Set the app name for macOS menu bar
-app.setName('API Visualization');
+app.setName('Nami');
 
 const template: MenuItemConstructorOptions[] = [
   ...(process.platform === 'darwin' ? [{

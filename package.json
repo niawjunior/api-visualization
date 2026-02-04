@@ -1,5 +1,5 @@
 {
-  "name": "api-visualization",
+  "name": "nami",
   "version": "0.1.0",
   "private": true,
   "main": "dist/main.js",
@@ -14,7 +14,7 @@
   },
   "build": {
     "appId": "com.apivis.app",
-    "productName": "API Visualization",
+    "productName": "Nami",
     "asar": true,
     "compression": "maximum",
     "files": [

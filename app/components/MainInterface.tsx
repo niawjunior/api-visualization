@@ -151,7 +151,7 @@ export default function MainInterface() {
               <FolderOpen className="w-8 h-8 text-background" />
             </div>
             <h1 className="text-3xl font-bold tracking-tight">
-              API Visualization
+              Nami
             </h1>
             <p className="text-muted-foreground text-sm max-w-xs mx-auto">
               Explore, test, and visualize your API endpoints.
