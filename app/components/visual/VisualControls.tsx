@@ -3,6 +3,7 @@
 import React from 'react';
 import { Search, Layout, GitFork, X, Hexagon, Network } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SettingsDialog } from '../settings/SettingsDialog';
 import type { DetectedProject, ProjectType } from '@/lib/types';
 
 // Project type display configuration
@@ -139,16 +140,19 @@ export function VisualControls({
         </div>
       )}
 
-      {/* Close Project Button */}
+      {/* Settings & Close Project */}
       {onClose && (
         <>
           <div className="h-px bg-border/50 my-1" />
-          <button
-            onClick={onClose}
-            className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-          >
-            Close Project
-          </button>
+          <div className="flex items-center gap-2">
+            <SettingsDialog />
+            <button
+              onClick={onClose}
+              className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              Close Project
+            </button>
+          </div>
         </>
       )}
     </div>

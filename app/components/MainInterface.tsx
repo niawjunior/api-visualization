@@ -6,7 +6,8 @@ import VisualProjectMap from './visual/VisualProjectMap';
 import { useProjectDetection } from './hooks/useProjectDetection';
 import { useRecentProjects } from './hooks/useRecentProjects';
 import { Button } from '@/components/ui/button';
-import { FolderOpen, Clock, X, Folder } from 'lucide-react';
+import { FolderOpen, Clock, X, Folder, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function MainInterface() {
   // Project State
@@ -14,6 +15,14 @@ export default function MainInterface() {
   const [currentPath, setCurrentPath] = useState<string>('');
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Sidebar State
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('nami-sidebar-collapsed') === 'true';
+    }
+    return false;
+  });
 
   // Recent projects
   const { recentProjects, addRecentProject, removeRecentProject } = useRecentProjects();
@@ -52,6 +61,27 @@ export default function MainInterface() {
     }
     setCurrentPath(path);
   }, [projectRoot]);
+
+  // Toggle sidebar and persist preference
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed(prev => {
+      const newValue = !prev;
+      localStorage.setItem('nami-sidebar-collapsed', String(newValue));
+      return newValue;
+    });
+  }, []);
+
+  // Keyboard shortcut: Cmd+B to toggle sidebar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+        e.preventDefault();
+        toggleSidebar();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleSidebar]);
 
   // Refresh file list when currentPath changes
   useEffect(() => {
@@ -211,17 +241,38 @@ export default function MainInterface() {
   // 2. Project View (Split: FileExplorer + VisualProjectMap with modes)
   return (
     <div className="flex h-full w-full overflow-hidden p-4 gap-4 pb-0 md:pb-4 relative">
-      {/* Sidebar - File Explorer */}
-      <div className="w-[320px] h-full shrink-0 border-r border-border/50">
+      {/* Sidebar - File Explorer (Collapsible) */}
+      <div 
+        className={cn(
+          "h-full shrink-0 border-r border-border/50 transition-all duration-300 ease-in-out overflow-hidden",
+          sidebarCollapsed ? "w-0 border-r-0" : "w-[320px]"
+        )}
+      >
         <FileExplorer
           files={files}
           currentPath={currentPath}
-          className="h-full shadow-lg"
+          className="h-full shadow-lg w-[320px]"
           onNavigate={handleNavigate}
           onRefresh={() => setCurrentPath(currentPath)} // Trigger re-fetch
           isLoading={isLoading}
         />
       </div>
+
+      {/* Toggle Sidebar Button */}
+      <button
+        onClick={toggleSidebar}
+        className={cn(
+          "absolute z-30 p-1.5 rounded-md bg-background border border-border shadow-sm hover:bg-muted transition-all",
+          sidebarCollapsed ? "left-6 top-6" : "left-[332px] top-6"
+        )}
+        title={sidebarCollapsed ? "Show sidebar (⌘B)" : "Hide sidebar (⌘B)"}
+      >
+        {sidebarCollapsed ? (
+          <PanelLeft className="w-4 h-4 text-muted-foreground" />
+        ) : (
+          <PanelLeftClose className="w-4 h-4 text-muted-foreground" />
+        )}
+      </button>
 
       {/* Main Area - VisualProjectMap (includes Structure/Deps/API modes) */}
       <div className="flex-1 flex flex-col h-full bg-card rounded-xl border border-border overflow-hidden shadow-sm relative transition-all min-w-0">

@@ -101,12 +101,13 @@ export function ApiExplorer({ currentPath, onOpenFile, headerRight }: ApiExplore
     // Filter endpoints
     const filteredEndpoints = useMemo(() => {
         return endpoints.filter(ep => {
-            // Search filter
+            // Search filter (path, description, function name)
             if (searchQuery) {
                 const query = searchQuery.toLowerCase();
                 const matchesPath = ep.path.toLowerCase().includes(query);
                 const matchesDesc = ep.description?.toLowerCase().includes(query);
-                if (!matchesPath && !matchesDesc) return false;
+                const matchesFunction = ep.functionName?.toLowerCase().includes(query);
+                if (!matchesPath && !matchesDesc && !matchesFunction) return false;
             }
             
             // Method filter
@@ -245,11 +246,35 @@ export function ApiExplorer({ currentPath, onOpenFile, headerRight }: ApiExplore
             <div className="flex-1 overflow-auto scroll-smooth">
                 <div className="p-6 pb-20">
                 {loading ? (
-                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-4 py-20">
-                        <div className="p-4 rounded-full bg-muted/20 animate-pulse">
-                            <Loader2 className="w-8 h-8 animate-spin text-primary/50" />
-                        </div>
-                        <p className="text-sm font-medium animate-pulse">Analyzing API landscape...</p>
+                    <div className="space-y-6">
+                        {/* Skeleton loading state */}
+                        {[1, 2].map((group) => (
+                            <div key={group} className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-5 w-5 rounded bg-muted/60 animate-pulse" />
+                                    <div className="h-5 w-32 rounded bg-muted/60 animate-pulse" />
+                                    <div className="h-4 w-8 rounded-full bg-muted/60 animate-pulse" />
+                                </div>
+                                <div className="space-y-2 pl-7">
+                                    {Array.from({ length: group === 1 ? 4 : 2 }).map((_, i) => (
+                                        <div key={i} className="p-4 rounded-lg border border-border/50 bg-card space-y-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-6 w-16 rounded-full bg-muted/60 animate-pulse" />
+                                                <div className="h-5 w-48 rounded bg-muted/60 animate-pulse" />
+                                                <div className="h-4 w-20 ml-auto rounded bg-muted/60 animate-pulse" />
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <div className="h-5 w-14 rounded-full bg-muted/60 animate-pulse" />
+                                                <div className="h-5 w-14 rounded-full bg-muted/60 animate-pulse" />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                        <p className="text-center text-sm text-muted-foreground animate-pulse pt-4">
+                            Scanning for API endpoints...
+                        </p>
                     </div>
                 ) : error ? (
                     <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-4 py-20">
