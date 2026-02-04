@@ -7,7 +7,6 @@ import { useFileSync } from './hooks/useFileSync';
 import { useProjectDetection } from './hooks/useProjectDetection';
 import { HeaderControls } from './HeaderControls';
 import VisualProjectMap from './visual/VisualProjectMap';
-import { CodeViewerModal } from './visual/CodeViewerModal';
 
 export default function MainInterface() {
   const [showExplorer, setShowExplorer] = useState(true);
@@ -24,7 +23,14 @@ export default function MainInterface() {
   } = useFileSync();
 
   // Project detection via extracted hook
+  // Project detection via extracted hook
   const { detectedProject } = useProjectDetection(currentPath);
+
+  const handleOpenFile = async (path: string, line?: number, app?: string) => {
+      if (window.electron) {
+          await window.electron.openPath(path, line, app);
+      }
+  };
 
   // Watch directory for changes
   useEffect(() => {
@@ -77,10 +83,7 @@ export default function MainInterface() {
                 currentPath={currentPath}
                 detectedProject={detectedProject}
                 onNavigate={handleNavigate}
-                onOpenFile={(path: string, line?: number, app?: 'antigravity' | 'vscode' | 'cursor' | 'system') => {
-                    // Always open externally
-                    window.electron?.openPath(path, line, app);
-                }}
+                onOpenFile={handleOpenFile}
             />
         </div>
       </div>

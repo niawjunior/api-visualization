@@ -123,6 +123,8 @@ const createWindow = () => {
     const win = new electron_1.BrowserWindow({
         width: 1200,
         height: 800,
+        minWidth: 1024,
+        minHeight: 768,
         titleBarStyle: "hidden",
         trafficLightPosition: { x: 18, y: 18 },
         webPreferences: {

@@ -31,7 +31,7 @@ interface VisualProjectMapProps {
   currentPath: string;
   detectedProject: DetectedProject | null;
   onNavigate: (path: string) => void;
-  onOpenFile: (path: string, line?: number) => void;
+  onOpenFile: (path: string, line?: number, app?: string) => void;
 }
 
 // --- Node Types ---

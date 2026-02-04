@@ -15,7 +15,18 @@ interface EditorSelectorProps {
     path: string;
     line: number;
     relativePath: string;
-    onOpen?: (path: string, line?: number, app?: 'antigravity' | 'vscode' | 'cursor' | 'system') => void;
+    onOpen?: (path: string, line?: number, app?: string) => void;
+}
+
+const DEFAULT_EDITORS = [
+    { name: 'VS Code', key: 'vscode', icon: Code, color: 'text-blue-500' },
+    { name: 'Cursor', key: 'cursor', icon: FileCode, color: 'text-foreground' },
+];
+
+interface DetectedEditor {
+    name: string;
+    path: string;
+    key: string;
 }
 
 function EditorSelector({ 
@@ -24,17 +35,50 @@ function EditorSelector({
     relativePath, 
     onOpen 
 }: EditorSelectorProps) {
-    const [defaultApp, setDefaultApp] = useState<'antigravity' | 'vscode' | 'cursor' | 'system' | null>(() => {
+    const [editors, setEditors] = useState<DetectedEditor[]>([]);
+    const [defaultApp, setDefaultApp] = useState<string | null>(() => {
         if (typeof window !== 'undefined') {
-            return localStorage.getItem('antigravity_editor_pref') as any || 'antigravity';
+            return localStorage.getItem('antigravity_editor_pref') || 'system';
         }
-        return 'antigravity';
+        return 'system';
     });
 
-    const handleOpen = (app: 'antigravity' | 'vscode' | 'cursor' | 'system') => {
-        onOpen?.(path, line, app);
-        localStorage.setItem('antigravity_editor_pref', app);
-        setDefaultApp(app);
+    useEffect(() => {
+        if (window.electron && window.electron.getAvailableEditors) {
+            window.electron.getAvailableEditors().then((available) => {
+                if (available && available.length > 0) {
+                     setEditors(available);
+                     // If no pref, default to first available
+                     if (!localStorage.getItem('antigravity_editor_pref')) {
+                         setDefaultApp(available[0].key);
+                     }
+                } else {
+                     // Fallback to defaults if detection fails or empty
+                     // We don't have detection in dev usually, so show VS Code/Cursor purely as suggestions?
+                     // actually, let's just stick to what we know + system
+                     setEditors([]);
+                }
+            });
+        } else {
+             setEditors([]);
+        }
+    }, []);
+
+    const handleOpen = (app: string) => {
+        const appKey = app;
+        
+        onOpen?.(path, line, appKey);
+        localStorage.setItem('antigravity_editor_pref', appKey);
+        setDefaultApp(appKey);
+    };
+
+    // Helper to get icon
+    const getIcon = (key: string) => {
+        if (key === 'vscode') return <Code className="w-3.5 h-3.5 text-blue-500" />;
+        if (key === 'cursor') return <FileCode className="w-3.5 h-3.5 text-foreground" />;
+        if (key === 'antigravity') return <div className="w-3.5 h-3.5 bg-primary rounded-full" />;
+        if (key === 'system') return <Monitor className="w-3.5 h-3.5 text-muted-foreground" />;
+        return <FileCode className="w-3.5 h-3.5 text-muted-foreground" />;
     };
 
     return (
@@ -44,11 +88,7 @@ function EditorSelector({
                     className="flex items-center gap-2 px-3 py-1.5 bg-muted hover:bg-muted/80 rounded-md transition-colors text-xs border border-border/50 outline-none focus:ring-1 focus:ring-primary/20"
                     title="Click to select editor"
                 >
-                     {/* Icon based on defaultApp */}
-                    {defaultApp === 'vscode' ? <Code className="w-3.5 h-3.5 text-blue-500" /> :
-                     defaultApp === 'cursor' ? <FileCode className="w-3.5 h-3.5 text-foreground" /> :
-                     defaultApp === 'antigravity' ? <div className="w-3.5 h-3.5 bg-primary rounded-full" /> :
-                     <Monitor className="w-3.5 h-3.5 text-muted-foreground" />}
+                     {getIcon(defaultApp || 'antigravity')}
                      
                     <span className="truncate max-w-[150px]">{relativePath}</span>
                     <ChevronDown className="w-3 h-3 opacity-50" />
@@ -61,32 +101,18 @@ function EditorSelector({
                     sideOffset={4}
                     className="z-[9999] min-w-[200px] overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
                 >
-                    <DropdownMenuPrimitive.Item 
-                        onSelect={() => handleOpen('antigravity')}
-                        className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-                    >
-                        <div className="w-3 h-3 bg-primary rounded-full mr-2" />
-                        Antigravity
-                        {defaultApp === 'antigravity' && <span className="ml-auto text-[10px] opacity-50">(Default)</span>}
-                    </DropdownMenuPrimitive.Item>
-                    
-                    <DropdownMenuPrimitive.Item
-                        onSelect={() => handleOpen('vscode')}
-                        className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-                    >
-                        <Code className="w-3 h-3 text-blue-500 mr-2" />
-                        VS Code
-                        {defaultApp === 'vscode' && <span className="ml-auto text-[10px] opacity-50">(Default)</span>}
-                    </DropdownMenuPrimitive.Item>
-                    
-                    <DropdownMenuPrimitive.Item
-                        onSelect={() => handleOpen('cursor')}
-                        className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-                    >
-                        <FileCode className="w-3 h-3 text-foreground mr-2" />
-                        Cursor
-                        {defaultApp === 'cursor' && <span className="ml-auto text-[10px] opacity-50">(Default)</span>}
-                    </DropdownMenuPrimitive.Item>
+                    {/* Dynamic Editors */}
+                    {editors.map((editor) => (
+                         <DropdownMenuPrimitive.Item
+                            key={editor.key}
+                            onSelect={() => handleOpen(editor.key)}
+                            className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                        >
+                            {getIcon(editor.key)}
+                            <span className="ml-2">{editor.name}</span>
+                            {defaultApp === editor.key && <span className="ml-auto text-[10px] opacity-50">(Default)</span>}
+                        </DropdownMenuPrimitive.Item>
+                    ))}
                     
                     <DropdownMenuPrimitive.Item
                         onSelect={() => handleOpen('system')}
@@ -129,7 +155,7 @@ interface ApiEndpointCardProps {
     };
     isExpanded?: boolean;
     onToggle?: () => void;
-    onOpenFile?: (path: string, line?: number, app?: 'antigravity' | 'vscode' | 'cursor' | 'system') => void;
+    onOpenFile?: (path: string, line?: number, app?: string) => void;
     onViewDependencies?: () => void;
 }
 

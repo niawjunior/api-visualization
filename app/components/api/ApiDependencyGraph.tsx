@@ -55,7 +55,7 @@ interface ApiDependencyGraphProps {
   endpoint: EndpointSummary;
   allEndpoints?: EndpointSummary[];  // For cross-referencing shared dependencies
   onClose: () => void;
-  onOpenFile?: (path: string) => void;
+  onOpenFile?: (path: string, line?: number, app?: string) => void;
 }
 
 // ============================================================================

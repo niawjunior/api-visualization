@@ -9,7 +9,7 @@ contextBridge.exposeInMainWorld("electron", {
     ipcRenderer.removeAllListeners('directory-changed');
     ipcRenderer.on('directory-changed', (event: Electron.IpcRendererEvent, path: string) => callback(path));
   },
-  openPath: (path: string, line?: number, app?: 'antigravity' | 'vscode' | 'cursor' | 'system') => ipcRenderer.invoke("open-path", path, line, app),
+  openPath: (path: string, line?: number, app?: string) => ipcRenderer.invoke("open-path", path, line, app),
   showItemInFolder: (path: string) => ipcRenderer.invoke('show-item-in-folder', path),
   readTextFile: (path: string) => ipcRenderer.invoke('read-text-file', path),
   readImageAsBase64: (path: string) => ipcRenderer.invoke('read-image-as-base64', path),
@@ -26,4 +26,5 @@ contextBridge.exposeInMainWorld("electron", {
   
   // Get file path from dropped File object
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
+  getAvailableEditors: () => ipcRenderer.invoke('get-available-editors'),
 });

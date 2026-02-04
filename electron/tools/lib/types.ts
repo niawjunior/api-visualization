@@ -1,6 +1,13 @@
 /**
  * Supported project types for detection
  */
+// Add to global.d.ts if needed, but for now strict typing in files
+export interface DetectedEditor {
+    name: string;
+    path: string;
+    key: string;
+}
+
 export type ProjectType = 'nextjs' | 'vite' | 'node' | 'python' | 'unknown';
 
 export interface ProjectInfo {

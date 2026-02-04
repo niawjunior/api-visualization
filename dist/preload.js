@@ -22,4 +22,5 @@ contextBridge.exposeInMainWorld("electron", {
     analyzeRoute: (filePath) => ipcRenderer.invoke('analyze-route', filePath),
     // Get file path from dropped File object
     getPathForFile: (file) => webUtils.getPathForFile(file),
+    getAvailableEditors: () => ipcRenderer.invoke('get-available-editors'),
 });
