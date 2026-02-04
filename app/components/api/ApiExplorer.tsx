@@ -154,18 +154,18 @@ export function ApiExplorer({ currentPath, onOpenFile }: ApiExplorerProps) {
     return (
         <div className="h-full flex flex-col bg-background">
             {/* Premium Header */}
-            <div className="shrink-0 border-b border-border/50 mt-14">
-                <div className="max-w-4xl mx-auto p-6 space-y-4">
+            <div className="shrink-0 border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
+                <div className="max-w-4xl mx-auto p-6 space-y-6">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-primary/10 rounded-lg">
+                        <div className="flex items-center gap-4">
+                            <div className="p-2.5 bg-primary/5 rounded-xl border border-primary/10 shadow-sm">
                                 <Network className="w-5 h-5 text-primary" />
                             </div>
                             <div>
-                                <h2 className="font-semibold text-lg">API Explorer</h2>
+                                <h2 className="font-semibold text-xl tracking-tight">API Explorer</h2>
                                 {!loading && endpoints.length > 0 && (
-                                    <p className="text-xs text-muted-foreground">
-                                        {endpoints.length} endpoints found
+                                    <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                                        {endpoints.length} endpoints detected
                                     </p>
                                 )}
                             </div>
@@ -175,7 +175,7 @@ export function ApiExplorer({ currentPath, onOpenFile }: ApiExplorerProps) {
                             size="sm" 
                             onClick={loadEndpoints} 
                             disabled={loading}
-                            className="h-8 gap-2"
+                            className="h-9 gap-2 shadow-sm border-border/60 hover:bg-muted/50"
                         >
                             <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
                             Refresh
@@ -184,26 +184,28 @@ export function ApiExplorer({ currentPath, onOpenFile }: ApiExplorerProps) {
                     
                     {/* Search & Filters Row */}
                     <div className="flex items-center gap-3">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <div className="relative flex-1 group">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-foreground transition-colors" />
                             <Input
                                 ref={searchInputRef}
-                                placeholder="Search endpoints by path or description... (Cmd+P)"
+                                placeholder="Search endpoints... (Cmd+P)"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9 h-10 bg-background/50"
+                                className="pl-9 h-10 bg-muted/40 border-border/60 focus-visible:bg-background transition-all"
                             />
                         </div>
                         
                         {/* Method Filters */}
-                        <div className="flex items-center gap-1.5 p-1 bg-muted/50 rounded-lg">
+                        <div className="flex items-center gap-1.5 p-1 bg-muted/40 border border-border/40 rounded-lg">
                             {ALL_METHODS.map(method => (
                                 <button
                                     key={method}
                                     onClick={() => toggleMethodFilter(method)}
                                     className={cn(
-                                        'transition-all',
-                                        methodFilter.length > 0 && !methodFilter.includes(method) && 'opacity-40 hover:opacity-70'
+                                        'transition-all duration-200 rounded-md',
+                                        methodFilter.length > 0 && !methodFilter.includes(method) 
+                                            ? 'opacity-40 grayscale hover:opacity-70 hover:grayscale-0' 
+                                            : 'opacity-100 shadow-sm'
                                     )}
                                 >
                                     <ApiMethodBadge method={method} size="sm" />
@@ -212,9 +214,9 @@ export function ApiExplorer({ currentPath, onOpenFile }: ApiExplorerProps) {
                             {methodFilter.length > 0 && (
                                 <button 
                                     onClick={() => setMethodFilter([])}
-                                    className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-background rounded transition-colors"
+                                    className="px-2.5 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-background rounded-md transition-all ml-1"
                                 >
-                                    Clear
+                                    Reset
                                 </button>
                             )}
                         </div>
@@ -223,39 +225,65 @@ export function ApiExplorer({ currentPath, onOpenFile }: ApiExplorerProps) {
             </div>
             
             {/* Content Area */}
-            <div className="flex-1 overflow-auto">
-                <div className="max-w-4xl mx-auto p-6">
+            <div className="flex-1 overflow-auto scroll-smooth">
+                <div className="max-w-4xl mx-auto p-6 pb-20">
                 {loading ? (
-                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-3">
-                        <Loader2 className="w-8 h-8 animate-spin" />
-                        <p className="text-sm">Analyzing API endpoints...</p>
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-4 py-20">
+                        <div className="p-4 rounded-full bg-muted/20 animate-pulse">
+                            <Loader2 className="w-8 h-8 animate-spin text-primary/50" />
+                        </div>
+                        <p className="text-sm font-medium animate-pulse">Analyzing API landscape...</p>
                     </div>
                 ) : error ? (
-                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-3">
-                        <AlertCircle className="w-8 h-8 text-destructive" />
-                        <p className="text-sm">{error}</p>
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-4 py-20">
+                        <div className="p-4 rounded-full bg-red-500/10 text-red-500">
+                             <AlertCircle className="w-8 h-8" />
+                        </div>
+                        <div className="text-center space-y-2">
+                             <p className="text-sm font-medium text-foreground">Analysis Failed</p>
+                             <p className="text-xs max-w-[300px]">{error}</p>
+                        </div>
                         <Button variant="outline" size="sm" onClick={loadEndpoints}>
-                            Retry
+                            Try Again
                         </Button>
                     </div>
                 ) : filteredEndpoints.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-3">
-                        <Network className="w-12 h-12 opacity-20" />
-                        <p className="text-sm">
-                            {endpoints.length === 0 
-                                ? 'No API endpoints found in this project'
-                                : 'No endpoints match your filters'
-                            }
-                        </p>
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-4 py-20">
+                        <div className="p-6 rounded-full bg-muted/20">
+                            <Network className="w-12 h-12 opacity-20" />
+                        </div>
+                        <div className="text-center">
+                            <p className="text-sm font-medium text-foreground">No endpoints found</p>
+                            <p className="text-xs mt-1">
+                                {endpoints.length === 0 
+                                    ? 'Try analyzing a different project directory'
+                                    : 'Adjust your filters to see results'
+                                }
+                            </p>
+                        </div>
+                        {endpoints.length > 0 && (
+                             <Button variant="ghost" size="sm" onClick={() => {
+                                 setSearchQuery('');
+                                 setMethodFilter([]);
+                             }}>
+                                Clear Filters
+                            </Button>
+                        )}
                     </div>
                 ) : (
-                    <div className="space-y-6">
+                    <div className="space-y-10">
                         {groupedEndpoints.map(([basePath, eps]) => (
-                            <div key={basePath}>
-                                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-                                    {basePath}
-                                </h3>
-                                <div className="space-y-2">
+                            <div key={basePath} className="relative">
+                                <div className="sticky top-0 z-10 -mx-6 px-6 py-2 bg-background/95 backdrop-blur-sm border-b border-border/40 mb-4 flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-primary/40" />
+                                    <h3 className="text-xs font-bold text-foreground/70 uppercase tracking-wider font-mono">
+                                        {basePath}
+                                    </h3>
+                                    <span className="ml-auto text-[10px] font-medium text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
+                                        {eps.length}
+                                    </span>
+                                </div>
+                                <div className="space-y-3">
                                     {eps.map((ep, i) => {
                                         const globalIndex = filteredEndpoints.indexOf(ep);
                                         return (

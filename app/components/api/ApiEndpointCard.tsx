@@ -205,17 +205,17 @@ export function ApiEndpointCard({ endpoint, isExpanded, onToggle, onOpenFile, on
         <motion.div
             layout
             className={cn(
-                'bg-card border border-border rounded-lg overflow-hidden transition-colors',
-                isExpanded && 'ring-1 ring-primary/20'
+                'group bg-card border border-border rounded-lg overflow-hidden transition-all duration-200',
+                isExpanded ? 'ring-1 ring-primary/10 shadow-md' : 'hover:border-primary/20 hover:shadow-sm'
             )}
         >
             {/* Header */}
             <button
                 onClick={onToggle}
-                className="w-full flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors text-left"
+                className="w-full flex items-center gap-3 p-3.5 hover:bg-muted/30 transition-colors text-left"
             >
-                <div className="text-muted-foreground">
-                    {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                <div className={cn("text-muted-foreground transition-transform duration-200", isExpanded && "rotate-90")}>
+                    <ChevronRight className="w-4 h-4" />
                 </div>
                 
                 <div className="flex items-center gap-2 flex-wrap">
@@ -224,12 +224,12 @@ export function ApiEndpointCard({ endpoint, isExpanded, onToggle, onOpenFile, on
                     ))}
                 </div>
                 
-                <span className="font-mono text-sm text-foreground flex-1 truncate">
+                <span className="font-mono text-sm text-foreground/90 font-medium flex-1 truncate">
                     {endpoint.path}
                 </span>
                 
                 {endpoint.description && (
-                    <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                    <span className="text-xs text-muted-foreground truncate max-w-[200px] hidden sm:inline-block">
                         {endpoint.description}
                     </span>
                 )}
@@ -242,65 +242,77 @@ export function ApiEndpointCard({ endpoint, isExpanded, onToggle, onOpenFile, on
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="border-t border-border"
+                        className="border-t border-border/50"
                     >
-                        <div className="p-4 space-y-4">
+                        <div className="p-5 space-y-6 bg-muted/5">
                             {/* Actions */}
-                            <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2 pb-4 border-b border-border/50">
                                 <button
                                     onClick={handleCopy}
-                                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-muted hover:bg-muted/80 rounded-md transition-colors"
+                                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-background border border-border/60 hover:border-primary/30 hover:bg-accent hover:text-accent-foreground rounded-md transition-all shadow-sm"
                                 >
-                                    {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                                    {copied ? 'Copied!' : 'Copy cURL'}
+                                    {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
+                                    {copied ? 'Copied' : 'Copy cURL'}
                                 </button>
                                 
                                 {endpoint.functionName && (
-                                    <div className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-muted border border-border/50 rounded-md font-mono text-muted-foreground mr-1">
-                                        <Code className="w-3 h-3 opacity-70" />
-                                        <span className="select-all font-semibold text-foreground/80">{endpoint.functionName}</span>
+                                    <div className="flex items-center gap-2 px-3 py-1.5 text-xs bg-muted/50 border border-border/60 rounded-md group/func">
+                                        <Code className="w-3.5 h-3.5 text-muted-foreground/70" />
+                                        <span className="font-mono text-muted-foreground select-all group-hover/func:text-foreground transition-colors">
+                                            {endpoint.functionName}
+                                        </span>
                                     </div>
                                 )}
 
-                                    <EditorSelector 
+                                <div className="ml-auto flex items-center gap-2">
+                                     <EditorSelector 
                                         path={endpoint.filePath} 
                                         line={endpoint.lineNumber} 
                                         relativePath={endpoint.relativePath}
                                         onOpen={onOpenFile} 
                                     />
-                                
-                                {onViewDependencies && (
-                                    <button
-                                        onClick={onViewDependencies}
-                                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 rounded-md transition-colors"
-                                    >
-                                        <GitBranch className="w-3 h-3" />
-                                        View Dependencies
-                                    </button>
-                                )}
+                                    
+                                    {onViewDependencies && (
+                                        <button
+                                            onClick={onViewDependencies}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-50/50 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30 hover:bg-blue-100/50 dark:hover:bg-blue-900/40 rounded-md transition-colors"
+                                        >
+                                            <GitBranch className="w-3.5 h-3.5" />
+                                            Dependencies
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                             
                             {/* Parameters */}
                             {endpoint.params.length > 0 && (
                                 <div>
-                                    <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
-                                        Route Parameters
+                                    <h4 className="text-[11px] font-bold text-muted-foreground/70 mb-3 uppercase tracking-wider pl-1">
+                                        Parameters
                                     </h4>
-                                    <div className="bg-muted/30 rounded-md p-3 overflow-x-auto">
-                                        <table className="w-full text-xs min-w-[300px]">
-                                            <thead>
-                                                <tr className="text-muted-foreground">
-                                                    <th className="text-left font-medium pb-2">Name</th>
-                                                    <th className="text-left font-medium pb-2">Type</th>
-                                                    <th className="text-left font-medium pb-2">Required</th>
+                                    <div className="bg-background border border-border/60 rounded-lg overflow-hidden shadow-sm overflow-x-auto">
+                                        <table className="w-full text-xs min-w-[400px]">
+                                            <thead className="bg-muted/30 border-b border-border/50">
+                                                <tr>
+                                                    <th className="text-left font-medium text-muted-foreground py-2 px-4 w-[30%]">Name</th>
+                                                    <th className="text-left font-medium text-muted-foreground py-2 px-4 w-[30%]">Type</th>
+                                                    <th className="text-left font-medium text-muted-foreground py-2 px-4">Required</th>
                                                 </tr>
                                             </thead>
-                                            <tbody>
+                                            <tbody className="divide-y divide-border/30">
                                                 {endpoint.params.map((param, i) => (
-                                                    <tr key={i}>
-                                                        <td className="py-1 font-mono text-blue-500">{param.name}</td>
-                                                        <td className="py-1 text-amber-600">{param.type}</td>
-                                                        <td className="py-1">{param.required ? '✓' : '—'}</td>
+                                                    <tr key={i} className="hover:bg-muted/10 transition-colors">
+                                                        <td className="py-2.5 px-4 font-mono text-blue-600 dark:text-blue-400 font-medium">{param.name}</td>
+                                                        <td className="py-2.5 px-4 font-mono text-amber-600 dark:text-amber-500">{param.type}</td>
+                                                        <td className="py-2.5 px-4">
+                                                            {param.required ? (
+                                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400 border border-red-100 dark:border-red-900/30">
+                                                                    Required
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-muted-foreground/50 text-[10px]">Optional</span>
+                                                            )}
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -312,44 +324,50 @@ export function ApiEndpointCard({ endpoint, isExpanded, onToggle, onOpenFile, on
                             {/* Request Body */}
                             {endpoint.requestBody && endpoint.requestBody.length > 0 && (
                                 <div>
-                                    <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
+                                    <h4 className="text-[11px] font-bold text-muted-foreground/70 mb-3 uppercase tracking-wider pl-1">
                                         Request Body
                                     </h4>
-                                    <div className="bg-muted/30 rounded-md p-3 overflow-x-auto">
+                                    <div className="bg-background border border-border/60 rounded-lg p-4 shadow-sm overflow-x-auto">
                                         <SchemaTree fields={endpoint.requestBody} />
                                     </div>
                                 </div>
                             )}
                             
-                            {/* Responses - Show all with status codes */}
-                            {endpoint.responses && endpoint.responses.length > 0 ? (
-                                <div className="space-y-3">
-                                    {endpoint.responses.map((response, idx) => (
-                                        <div key={idx}>
-                                            <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide flex items-center gap-2">
-                                                <span className={cn(
-                                                    "px-1.5 py-0.5 rounded text-[10px] font-bold",
-                                                    response.isError 
-                                                        ? "bg-red-500/20 text-red-500" 
-                                                        : "bg-green-500/20 text-green-500"
-                                                )}>
-                                                    {response.statusCode || (response.isError ? '4xx/5xx' : '2xx')}
-                                                </span>
-                                                {response.isError ? 'Error Response' : 'Success Response'}
-                                            </h4>
-                                            <div className="bg-muted/30 rounded-md p-3 overflow-x-auto">
-                                                <SchemaTree fields={response.schema} />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : endpoint.responseBody && endpoint.responseBody.length > 0 ? (
+                            {/* Responses */}
+                            {(endpoint.responses && endpoint.responses.length > 0) || (endpoint.responseBody && endpoint.responseBody.length > 0) ? (
                                 <div>
-                                    <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
-                                        Response Schema
+                                     <h4 className="text-[11px] font-bold text-muted-foreground/70 mb-3 uppercase tracking-wider pl-1">
+                                        Responses
                                     </h4>
-                                    <div className="bg-muted/30 rounded-md p-3 overflow-x-auto">
-                                        <SchemaTree fields={endpoint.responseBody} />
+                                    <div className="space-y-4">
+                                        {endpoint.responses?.map((response, idx) => (
+                                            <div key={idx} className="bg-background border border-border/60 rounded-lg overflow-hidden shadow-sm">
+                                                <div className={cn(
+                                                    "px-4 py-2 border-b border-border/50 flex items-center gap-3 text-xs font-medium",
+                                                    response.isError ? "bg-red-50/30 dark:bg-red-950/10" : "bg-green-50/30 dark:bg-green-950/10"
+                                                )}>
+                                                    <span className={cn(
+                                                        "px-2 py-0.5 rounded text-[10px] font-bold border",
+                                                        response.isError 
+                                                            ? "bg-white dark:bg-red-950/50 text-red-600 border-red-200 dark:border-red-900/50" 
+                                                            : "bg-white dark:bg-green-950/50 text-green-600 border-green-200 dark:border-green-900/50"
+                                                    )}>
+                                                        {response.statusCode || (response.isError ? 'Error' : '200 OK')}
+                                                    </span>
+                                                    <span className="text-muted-foreground">
+                                                        {response.isError ? 'Error Response' : 'Success Response'}
+                                                    </span>
+                                                </div>
+                                                <div className="p-4 overflow-x-auto">
+                                                    <SchemaTree fields={response.schema} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {(!endpoint.responses || endpoint.responses.length === 0) && endpoint.responseBody && (
+                                             <div className="bg-background border border-border/60 rounded-lg p-4 shadow-sm overflow-x-auto">
+                                                <SchemaTree fields={endpoint.responseBody} />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ) : null}
