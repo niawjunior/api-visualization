@@ -12,7 +12,6 @@ interface FileContextMenuProps {
   onCopyPath: (path: string) => void;
   onQuickLook: (file: FileEntry) => void;
   onCalculateSize: (file: FileEntry) => void;
-  onSuggestionClick?: (message: string) => void;
   selectedFiles: Set<string>;
   isImageFile: (name: string) => boolean;
 }
@@ -25,7 +24,6 @@ export function FileContextMenu({
   onCopyPath,
   onQuickLook,
   onCalculateSize,
-  onSuggestionClick,
   selectedFiles,
   isImageFile
 }: FileContextMenuProps) {

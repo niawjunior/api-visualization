@@ -1,6 +1,5 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
 import { Folder, Search, X, RefreshCw, ChevronLeft, Home, Monitor, Download, FileText, Clock, Pencil, Sparkles, FileSearch, LayoutDashboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '../ThemeToggle';
@@ -17,13 +16,10 @@ interface FileExplorerHeaderProps {
   onNavigate: (path: string) => void;
   onRefresh?: () => void;
   onClearFilters?: () => void;
-  onSuggestionClick?: (message: string) => void;
 
   selectedCount: number;
-  activeFilters?: string[];
   quickPaths: QuickPath[];
   recentPaths: string[];
-  suggestion: { message: string; subtext: string; prompt: string } | null;
   onSearch: (query: string, mode: 'name' | 'content') => void;
   isSearching?: boolean;
 }
@@ -33,13 +29,10 @@ export function FileExplorerHeader({
   onNavigate,
   onRefresh,
   onClearFilters,
-  onSuggestionClick,
 
   selectedCount,
-  activeFilters,
   quickPaths,
   recentPaths,
-  suggestion,
   onSearch,
   isSearching = false
 }: FileExplorerHeaderProps) {
@@ -129,55 +122,11 @@ export function FileExplorerHeader({
         </div>
       </div>
       
-      {/* Suggestion Chip */}
-      <AnimatePresence>
-          {suggestion && onSuggestionClick && !query && (
-              <motion.button
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  onClick={() => onSuggestionClick(suggestion.prompt)}
-                  className="flex items-center justify-between w-full px-3 py-2 bg-primary/10 hover:bg-primary/15 border border-primary/20 rounded-lg text-left group transition-colors mb-1"
-              >
-                  <div className="flex items-center gap-2 overflow-hidden">
-                      <Sparkles className="w-3.5 h-3.5 text-primary shrink-0 animate-pulse" />
-                      <div className="flex flex-col truncate">
-                          <span className="text-[10px] font-semibold text-primary truncate">{suggestion.message}</span>
-                          <span className="text-[10px] text-primary/80 truncate">{suggestion.subtext}</span>
-                      </div>
-                  </div>
-              </motion.button>
-          )}
-      </AnimatePresence>
-
 
       {currentPath && (
           <p className="text-[10px] text-muted-foreground truncate font-mono" title={currentPath}>
               {currentPath}
           </p>
-      )}
-      {/* Active Filters */}
-      {activeFilters && activeFilters.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1">
-              {activeFilters.map(filter => (
-                  <span 
-                      key={filter}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-medium rounded-full"
-                  >
-                      .{filter}
-                      {onClearFilters && (
-                          <button 
-                              onClick={onClearFilters}
-                              className="hover:bg-primary/20 rounded-full p-0.5 transition-colors"
-                              title="Clear filter"
-                          >
-                              <X className="w-2.5 h-2.5" />
-                              <button />
-                          </button>
-                      )}
-                  </span>
-              ))}
-          </div>
       )}
     </div>
   );

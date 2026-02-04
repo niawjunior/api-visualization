@@ -13,9 +13,7 @@ import { FilePreviewPanel } from './FilePreviewPanel';
 import { useFileSelection } from './useFileSelection';
 import { useFolderSizes } from './useFolderSizes';
 import { useFileNavigation } from './useFileNavigation';
-import { useSmartSuggestions } from './useSmartSuggestions';
 import { useFileExplorerHotkeys } from './useFileExplorerHotkeys';
-import { Dashboard } from '../dashboard/Dashboard';
 import type { FileEntry } from '@/lib/types';
 
 // Re-export for backwards compatibility
@@ -25,11 +23,9 @@ interface FileExplorerProps {
   files: FileEntry[];
   currentPath?: string;
   className?: string;
-  activeFilters?: string[];
   onClearFilters?: () => void;
   onNavigate?: (path: string) => void;
   onRefresh?: () => void;
-  onSuggestionClick?: (message: string) => void;
   isLoading?: boolean;
 }
 
@@ -47,11 +43,9 @@ export const FileExplorer = memo(function FileExplorer({
   files, 
   currentPath, 
   className, 
-  activeFilters,
   onClearFilters,
   onNavigate,
   onRefresh,
-  onSuggestionClick,
   isLoading = false
 }: FileExplorerProps) {
 
@@ -76,13 +70,11 @@ export const FileExplorer = memo(function FileExplorer({
 
   const { selectedFiles, setSelectedFiles, handleSelect: handleSelectionChange, clearSelection } = useFileSelection(displayedFiles);
   const { folderSizes, handleCalculateSize } = useFolderSizes();
-  const suggestion = useSmartSuggestions(files);
 
   useFileExplorerHotkeys({
       files: displayedFiles,
       selectedFiles,
       onNavigate,
-      onSuggestionClick,
       setPreviewFile,
       setContextMenu,
       clearSelection
@@ -104,7 +96,6 @@ export const FileExplorer = memo(function FileExplorer({
                      const result = await window.electron.searchContent({
                          directory: currentPath,
                          query: searchQuery,
-                         extensions: activeFilters
                      });
                      
                      const entries: FileEntry[] = result.matches.map((m:any) => ({
@@ -125,7 +116,7 @@ export const FileExplorer = memo(function FileExplorer({
         }, 500); // Debounce
         return () => clearTimeout(timer);
     }
-  }, [searchQuery, searchMode, currentPath, activeFilters]);
+  }, [searchQuery, searchMode, currentPath]);
 
   // Handle context menu close
   useEffect(() => {
@@ -178,13 +169,10 @@ export const FileExplorer = memo(function FileExplorer({
         onNavigate={onNavigate || (() => {})}
         onRefresh={onRefresh}
         onClearFilters={onClearFilters}
-        onSuggestionClick={onSuggestionClick}
 
         selectedCount={selectedFiles.size}
-        activeFilters={activeFilters}
         quickPaths={quickPaths}
         recentPaths={recentPaths}
-        suggestion={suggestion}
         onSearch={(q, m) => {
             setSearchQuery(q);
             setSearchMode(m);
@@ -192,12 +180,7 @@ export const FileExplorer = memo(function FileExplorer({
         isSearching={isSearching}
       />
       
-      {!currentPath ? (
-        <Dashboard 
-            onNavigate={onNavigate || (() => {})} 
-            onOpen={(path) => window.electron?.openPath(path)} 
-        />
-      ) : (
+     
       <div className="flex-1 overflow-hidden">
         {displayedFiles.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2 p-4">
@@ -243,7 +226,6 @@ export const FileExplorer = memo(function FileExplorer({
             />
         )}
       </div>
-      )}
 
       <FilePreviewPanel 
          previewFile={previewFile}
@@ -259,7 +241,6 @@ export const FileExplorer = memo(function FileExplorer({
         onCopyPath={handleCopyPath}
         onQuickLook={setPreviewFile}
         onCalculateSize={(file) => handleCalculateSize(file.path)}
-        onSuggestionClick={onSuggestionClick}
         selectedFiles={selectedFiles}
         isImageFile={isImageFile}
       />

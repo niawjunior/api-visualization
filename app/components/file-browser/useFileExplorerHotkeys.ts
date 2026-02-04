@@ -5,7 +5,6 @@ interface UseHotkeysProps {
     files: FileEntry[];
     selectedFiles: Set<string>;
     onNavigate?: (path: string) => void;
-    onSuggestionClick?: (suggestion: string) => void;
     setPreviewFile: (file: FileEntry | null) => void;
     setContextMenu: (state: any) => void;
     clearSelection: () => void;
