@@ -54,17 +54,7 @@ export function FileExplorerHeader({
     <div className="p-3 border-b border-border bg-secondary/50 flex flex-col gap-2">
       <div className="flex items-center justify-between">
           <h3 className="font-semibold text-sm flex items-center gap-2 text-foreground min-w-0">
-              {/* Dashboard Home Button */}
-              <button 
-                  onClick={() => onNavigate('')}
-                  className={cn(
-                      "p-1 hover:bg-secondary rounded transition-colors mr-1",
-                      !currentPath ? "text-primary bg-primary/10" : "text-muted-foreground"
-                  )}
-                  title="Go to Dashboard"
-              >
-                  <LayoutDashboard className="w-4 h-4" />
-              </button>
+
 
               {currentPath && currentPath !== '/' && (
                   <button 
@@ -160,54 +150,7 @@ export function FileExplorerHeader({
           )}
       </AnimatePresence>
 
-      {/* Quick Access Bar */}
-      <div className="flex items-center gap-1 px-2 py-1 bg-muted/10 border-b border-border/30 overflow-x-auto no-scrollbar -mx-3">
-          {quickPaths.map(qp => (
-              <button
-                  key={qp.name}
-                  onClick={() => onNavigate(qp.path)}
-                  className={cn(
-                      "flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium transition-colors whitespace-nowrap",
-                      currentPath === qp.path 
-                          ? "bg-primary/10 text-primary" 
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                  title={qp.path}
-              >
-                  <qp.icon className="w-3 h-3" />
-                  {qp.name}
-              </button>
-          ))}
-          {/* Recent Locations Divider & Chips */}
-          {recentPaths.filter(rp => !quickPaths.some(qp => qp.path === rp)).length > 0 && (
-              <>
-                  <div className="h-4 w-px bg-border/50 mx-1" />
-                  <Clock className="w-3 h-3 text-muted-foreground shrink-0" />
-                  {recentPaths
-                      .filter(rp => !quickPaths.some(qp => qp.path === rp))
-                      .slice(0, 3) // Show max 3 recent
-                      .map(rp => {
-                          const folderName = rp.split('/').pop() || rp;
-                          return (
-                              <button
-                                  key={rp}
-                                  onClick={() => onNavigate(rp)}
-                                  className={cn(
-                                      "flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors whitespace-nowrap",
-                                      currentPath === rp
-                                          ? "bg-primary/10 text-primary"
-                                          : "text-muted-foreground/70 hover:bg-muted hover:text-foreground"
-                                  )}
-                                  title={rp}
-                              >
-                                  <Folder className="w-3 h-3" />
-                                  {folderName}
-                              </button>
-                          );
-                      })}
-              </>
-          )}
-      </div>
+
       {currentPath && (
           <p className="text-[10px] text-muted-foreground truncate font-mono" title={currentPath}>
               {currentPath}

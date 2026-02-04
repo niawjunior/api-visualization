@@ -4,6 +4,7 @@ const { contextBridge, ipcRenderer, webUtils } = require("electron");
 contextBridge.exposeInMainWorld("electron", {
   getApiPort: () => ipcRenderer.invoke("get-api-port"),
   getDesktopPath: () => ipcRenderer.invoke("get-desktop-path"),
+  selectDirectory: () => ipcRenderer.invoke("select-directory"),
   watchDirectory: (path: string) => ipcRenderer.invoke("watch-directory", path),
   onDirectoryChanged: (callback: (path: string) => void) => {
     ipcRenderer.removeAllListeners('directory-changed');

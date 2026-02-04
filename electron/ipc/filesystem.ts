@@ -10,6 +10,19 @@ export function registerFileSystemHandlers() {
         return path.join(os.homedir(), 'Desktop');
     });
 
+    // Open Directory Dialog (for "Open Project" button)
+    ipcMain.handle('select-directory', async () => {
+        const { dialog } = require('electron');
+        const result = await dialog.showOpenDialog({
+            properties: ['openDirectory'],
+            title: 'Open Project Folder'
+        });
+        if (result.canceled || result.filePaths.length === 0) {
+            return null;
+        }
+        return result.filePaths[0];
+    });
+
     // Show item in folder
     ipcMain.handle('show-item-in-folder', async (event, targetPath: string) => {
         if (!isPathAllowed(targetPath)) {

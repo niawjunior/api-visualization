@@ -32,6 +32,7 @@ interface VisualProjectMapProps {
   detectedProject: DetectedProject | null;
   onNavigate: (path: string) => void;
   onOpenFile: (path: string, line?: number, app?: string) => void;
+  onClose?: () => void;
 }
 
 // --- Node Types ---
@@ -40,7 +41,7 @@ const nodeTypes: NodeTypes = {
   file: FileNode,
 };
 
-function VisualProjectMapContent({ files, currentPath, detectedProject, onNavigate, onOpenFile }: VisualProjectMapProps) {
+function VisualProjectMapContent({ files, currentPath, detectedProject, onNavigate, onOpenFile, onClose }: VisualProjectMapProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -158,6 +159,17 @@ function VisualProjectMapContent({ files, currentPath, detectedProject, onNaviga
           <span className="px-2.5 py-1 text-xs font-medium bg-primary/10 text-primary rounded-md">
             API
           </span>
+          {onClose && (
+            <>
+              <div className="w-px h-4 bg-border mx-1" />
+              <button
+                onClick={onClose}
+                className="px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+              >
+                Close
+              </button>
+            </>
+          )}
         </div>
     );
 
@@ -181,6 +193,7 @@ function VisualProjectMapContent({ files, currentPath, detectedProject, onNaviga
         canShowDependencies={!!canShowDependencies}
         viewMode={viewMode}
         setViewMode={setViewMode}
+        onClose={onClose}
       />
       {isLoadingDeps && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-background/80 backdrop-blur rounded-full shadow border border-border flex items-center gap-2">

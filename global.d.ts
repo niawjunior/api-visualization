@@ -64,6 +64,7 @@ declare global {
     electron: {
       getApiPort: () => Promise<number>;
       getDesktopPath: () => Promise<string>;
+      selectDirectory: () => Promise<string | null>;
       watchDirectory: (path: string) => Promise<void>;
       onDirectoryChanged: (callback: (path: string) => void) => void;
       openPath: (path: string, line?: number, app?: string) => Promise<void>;
