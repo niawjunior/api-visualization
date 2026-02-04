@@ -10,50 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import ApiDependencyGraph from './ApiDependencyGraph';
 
+import { DependencyFilter, DependencyOption } from './DependencyFilter';
+import { LocalApiEndpoint, DependencyInfo, HttpMethod } from './types';
+
 interface ApiExplorerProps {
     currentPath: string;
     onOpenFile?: (path: string, line?: number, app?: string) => void;
     headerRight?: React.ReactNode;
-}
-
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
-
-interface DependencyInfo {
-    name: string;
-    module: string;
-    type: 'service' | 'database' | 'external' | 'utility';
-    usage?: string;
-}
-
-interface GroupedDependency {
-    module: string;
-    moduleLabel: string;
-    type: 'service' | 'database' | 'external' | 'utility';
-    items: string[];
-    count: number;
-}
-
-interface LocalApiDependencies {
-    services: DependencyInfo[];
-    database: DependencyInfo[];
-    external: DependencyInfo[];
-    utilities: DependencyInfo[];
-    grouped?: GroupedDependency[];
-}
-
-interface LocalApiEndpoint {
-    path: string;
-    methods: HttpMethod[];
-    params: { name: string; type: string; required: boolean; description?: string }[];
-    queryParams: { name: string; type: string; required: boolean }[];
-    requestBody?: { name: string; type: string; required: boolean }[];
-    responseBody?: { name: string; type: string; required: boolean }[];
-    dependencies?: LocalApiDependencies;
-    filePath: string;
-    relativePath: string;
-    lineNumber: number;
-    functionName?: string;
-    description?: string;
 }
 
 const ALL_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
@@ -64,6 +27,7 @@ export function ApiExplorer({ currentPath, onOpenFile, headerRight }: ApiExplore
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [methodFilter, setMethodFilter] = useState<HttpMethod[]>([]);
+    const [dependencyFilter, setDependencyFilter] = useState<string | null>(null);
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
     const [selectedEndpoint, setSelectedEndpoint] = useState<LocalApiEndpoint | null>(null);
     
@@ -106,6 +70,31 @@ export function ApiExplorer({ currentPath, onOpenFile, headerRight }: ApiExplore
     useEffect(() => {
         loadEndpoints();
     }, [currentPath]);
+
+    // Extract Unique Dependencies
+    const dependencyOptions = useMemo<DependencyOption[]>(() => {
+        const optionMap = new Map<string, DependencyOption>();
+        
+        endpoints.forEach(ep => {
+            if (!ep.dependencies?.grouped) return;
+            
+            ep.dependencies.grouped.forEach(dep => {
+                const key = dep.module; // Unique key for dependency
+                if (!optionMap.has(key)) {
+                    optionMap.set(key, {
+                        label: dep.moduleLabel || dep.module,
+                        value: dep.module,
+                        type: dep.type,
+                        count: 0
+                    });
+                }
+                const option = optionMap.get(key)!;
+                option.count++;
+            });
+        });
+
+        return Array.from(optionMap.values()).sort((a, b) => b.count - a.count);
+    }, [endpoints]);
     
     // Filter endpoints
     const filteredEndpoints = useMemo(() => {
@@ -123,10 +112,18 @@ export function ApiExplorer({ currentPath, onOpenFile, headerRight }: ApiExplore
                 const hasMethod = ep.methods.some((m: HttpMethod) => methodFilter.includes(m));
                 if (!hasMethod) return false;
             }
+
+            // Dependency filter
+            if (dependencyFilter) {
+                const hasDependency = ep.dependencies?.grouped?.some(
+                    dep => dep.module === dependencyFilter
+                );
+                if (!hasDependency) return false;
+            }
             
             return true;
         });
-    }, [endpoints, searchQuery, methodFilter]);
+    }, [endpoints, searchQuery, methodFilter, dependencyFilter]);
     
     // Group by base path
     const groupedEndpoints = useMemo(() => {
@@ -155,7 +152,7 @@ export function ApiExplorer({ currentPath, onOpenFile, headerRight }: ApiExplore
     return (
         <div className="h-full flex flex-col bg-background">
             {/* Premium Header */}
-            <div className="shrink-0 border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
+            <div className="shrink-0 border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-30">
                 <div className="p-6 space-y-6">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
@@ -204,6 +201,12 @@ export function ApiExplorer({ currentPath, onOpenFile, headerRight }: ApiExplore
                             />
                         </div>
                         
+                        <DependencyFilter 
+                            options={dependencyOptions}
+                            selected={dependencyFilter}
+                            onSelect={setDependencyFilter}
+                        />
+
                         {/* Method Filters */}
                         <div className="flex items-center gap-1.5 p-1 bg-muted/40 border border-border/40 rounded-lg">
                             {ALL_METHODS.map(method => (
@@ -269,11 +272,17 @@ export function ApiExplorer({ currentPath, onOpenFile, headerRight }: ApiExplore
                                     : 'Adjust your filters to see results'
                                 }
                             </p>
+                            {dependencyFilter && (
+                                <span className="block mt-1">
+                                    Filtered by dependency: <span className="font-semibold text-primary">{dependencyOptions.find(o => o.value === dependencyFilter)?.label}</span>
+                                </span>
+                            )}
                         </div>
                         {endpoints.length > 0 && (
                              <Button variant="ghost" size="sm" onClick={() => {
                                  setSearchQuery('');
                                  setMethodFilter([]);
+                                 setDependencyFilter(null);
                              }}>
                                 Clear Filters
                             </Button>

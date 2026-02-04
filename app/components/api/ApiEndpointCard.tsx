@@ -6,6 +6,8 @@ import { ChevronDown, ChevronRight, Copy, Check, FileCode, ExternalLink, GitBran
 import { cn } from '@/lib/utils';
 import { ApiMethodBadge } from './ApiMethodBadge';
 
+import { LocalApiEndpoint, SchemaField } from './types';
+
 import { createPortal } from 'react-dom';
 
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
@@ -128,32 +130,8 @@ function EditorSelector({
     );
 }
 
-interface SchemaField {
-    name: string;
-    type: string;
-    required: boolean;
-    children?: SchemaField[];
-}
-
 interface ApiEndpointCardProps {
-    endpoint: {
-        path: string;
-        methods: ('GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS')[];
-        params: { name: string; type: string; required: boolean; description?: string }[];
-        queryParams: { name: string; type: string; required: boolean }[];
-        requestBody?: SchemaField[];
-        responseBody?: SchemaField[];
-        responses?: Array<{
-            statusCode?: number;
-            isError: boolean;
-            schema: SchemaField[];
-        }>;
-        filePath: string;
-        relativePath: string;
-        lineNumber: number;
-        functionName?: string;
-        description?: string;
-    };
+    endpoint: LocalApiEndpoint;
     isExpanded?: boolean;
     onToggle?: () => void;
     onOpenFile?: (path: string, line?: number, app?: string) => void;
@@ -334,43 +312,16 @@ export function ApiEndpointCard({ endpoint, isExpanded, onToggle, onOpenFile, on
                             )}
                             
                             {/* Responses */}
-                            {(endpoint.responses && endpoint.responses.length > 0) || (endpoint.responseBody && endpoint.responseBody.length > 0) ? (
+                            {endpoint.responseBody && endpoint.responseBody.length > 0 && (
                                 <div>
                                      <h4 className="text-[11px] font-bold text-muted-foreground/70 mb-3 uppercase tracking-wider pl-1">
-                                        Responses
+                                        Response Schema
                                     </h4>
-                                    <div className="space-y-4">
-                                        {endpoint.responses?.map((response, idx) => (
-                                            <div key={idx} className="bg-background border border-border/60 rounded-lg overflow-hidden shadow-sm">
-                                                <div className={cn(
-                                                    "px-4 py-2 border-b border-border/50 flex items-center gap-3 text-xs font-medium",
-                                                    response.isError ? "bg-red-50/30 dark:bg-red-950/10" : "bg-green-50/30 dark:bg-green-950/10"
-                                                )}>
-                                                    <span className={cn(
-                                                        "px-2 py-0.5 rounded text-[10px] font-bold border",
-                                                        response.isError 
-                                                            ? "bg-white dark:bg-red-950/50 text-red-600 border-red-200 dark:border-red-900/50" 
-                                                            : "bg-white dark:bg-green-950/50 text-green-600 border-green-200 dark:border-green-900/50"
-                                                    )}>
-                                                        {response.statusCode || (response.isError ? 'Error' : '200 OK')}
-                                                    </span>
-                                                    <span className="text-muted-foreground">
-                                                        {response.isError ? 'Error Response' : 'Success Response'}
-                                                    </span>
-                                                </div>
-                                                <div className="p-4 overflow-x-auto">
-                                                    <SchemaTree fields={response.schema} />
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {(!endpoint.responses || endpoint.responses.length === 0) && endpoint.responseBody && (
-                                             <div className="bg-background border border-border/60 rounded-lg p-4 shadow-sm overflow-x-auto">
-                                                <SchemaTree fields={endpoint.responseBody} />
-                                            </div>
-                                        )}
+                                    <div className="bg-background border border-border/60 rounded-lg p-4 shadow-sm overflow-x-auto">
+                                        <SchemaTree fields={endpoint.responseBody} />
                                     </div>
                                 </div>
-                            ) : null}
+                            )}
                         </div>
                     </motion.div>
                 )}
