@@ -21,6 +21,70 @@ A desktop application for exploring, testing, and visualizing API endpoints in y
 - **Visualization**: React Flow
 - **UI Components**: shadcn/ui
 
+## Architecture
+
+### How It Works
+
+Nami uses a multi-layer architecture where the Electron main process handles file system operations and code analysis, while the React frontend provides the visualization and user interface.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         Nami Desktop App                        │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │                    React Frontend (Renderer)              │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐   │  │
+│  │  │   Entry     │  │   File      │  │  Visual Project │   │  │
+│  │  │   Screen    │  │   Explorer  │  │  Map (3 modes)  │   │  │
+│  │  └─────────────┘  └─────────────┘  └─────────────────┘   │  │
+│  │                          │                    │           │  │
+│  │                          ▼                    ▼           │  │
+│  │  ┌─────────────────────────────────────────────────────┐ │  │
+│  │  │              API Explorer + Console                 │ │  │
+│  │  └─────────────────────────────────────────────────────┘ │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                              │ IPC                              │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │                 Electron Main Process                     │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐   │  │
+│  │  │  Filesystem │  │  Dependency │  │   API Scanner   │   │  │
+│  │  │  Operations │  │  Analyzer   │  │   (AST Parser)  │   │  │
+│  │  └─────────────┘  └─────────────┘  └─────────────────┘   │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Core Components
+
+| Component | Description |
+|-----------|-------------|
+| **MainInterface** | Manages app state (project open/close), renders entry screen or workspace |
+| **FileExplorer** | Project-scoped file browser with search and navigation |
+| **VisualProjectMap** | React Flow-based visualization with Structure/Deps/API modes |
+| **ApiExplorer** | Displays detected endpoints grouped by file/router |
+| **ApiConsole** | Interactive request builder for testing endpoints |
+
+### API Detection Flow
+
+```
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│   Open       │───▶│   Detect     │───▶│   Parse AST  │───▶│   Extract    │
+│   Project    │    │   Framework  │    │   (Python)   │    │   Endpoints  │
+└──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘
+                          │                                        │
+                          ▼                                        ▼
+                    ┌──────────────┐                        ┌──────────────┐
+                    │  FastAPI /   │                        │   Route,     │
+                    │  Flask /     │                        │   Method,    │
+                    │  Django      │                        │   Params     │
+                    └──────────────┘                        └──────────────┘
+```
+
+1. **Project Detection**: Scans for `requirements.txt`, `pyproject.toml`, `package.json`
+2. **Framework Detection**: Identifies FastAPI, Flask, Django based on imports
+3. **AST Parsing**: Uses Python AST to find route decorators (`@app.get`, `@router.post`, etc.)
+4. **Endpoint Extraction**: Extracts path, HTTP method, parameters, and docstrings
+
 ## Getting Started
 
 ### Prerequisites
