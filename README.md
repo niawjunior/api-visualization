@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nami
+
+A desktop application for exploring, testing, and visualizing API endpoints in your projects.
+
+## Features
+
+- **Project-Scoped File Explorer** - Open any project folder and navigate files within that scope
+- **API Endpoint Detection** - Automatically scans Python (FastAPI, Flask, Django) projects for API routes
+- **Interactive API Console** - Test endpoints directly with request builder and response viewer
+- **Visual Project Map** - Three view modes:
+  - **Structure** - File/folder hierarchy visualization
+  - **Dependencies** - Import/export relationship graph
+  - **API** - Grouped endpoint explorer with testing
+- **Recent Projects** - Quick access to recently opened projects
+- **Drag & Drop** - Drop a folder onto the entry screen to open it
+
+## Tech Stack
+
+- **Frontend**: Next.js, React, TypeScript, Tailwind CSS
+- **Desktop**: Electron
+- **Visualization**: React Flow
+- **UI Components**: shadcn/ui
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+
+### Development
 
 ```bash
+# Install dependencies
+npm install
+
+# Run in development mode
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This starts both the Next.js dev server and Electron in development mode.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# Build for production
+npm run build
 
-## Learn More
+# Package as desktop app
+npm run dist
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Usage
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Open Project**: Click "Open Project" or drag a folder onto the entry screen
+2. **Explore Files**: Use the sidebar to navigate your project
+3. **Switch Views**: Use the Structure/Deps/API toggle in the top-right
+4. **Test APIs**: In API view, click endpoints to test them with the interactive console
+5. **Close Project**: Click "Close Project" to return to the entry screen
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Supported Frameworks
 
-## Deploy on Vercel
+- FastAPI
+- Flask
+- Django REST Framework
+- Express.js (coming soon)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
