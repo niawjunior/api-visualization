@@ -19,7 +19,7 @@ export default function MainInterface() {
   // Sidebar State
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('nami-sidebar-collapsed') === 'true';
+      return localStorage.getItem('duke-sidebar-collapsed') === 'true';
     }
     return false;
   });
@@ -66,7 +66,7 @@ export default function MainInterface() {
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed(prev => {
       const newValue = !prev;
-      localStorage.setItem('nami-sidebar-collapsed', String(newValue));
+      localStorage.setItem('duke-sidebar-collapsed', String(newValue));
       return newValue;
     });
   }, []);
@@ -181,7 +181,7 @@ export default function MainInterface() {
               <FolderOpen className="w-8 h-8 text-background" />
             </div>
             <h1 className="text-3xl font-bold tracking-tight">
-              Nami
+              Duke
             </h1>
             <p className="text-muted-foreground text-sm max-w-xs mx-auto">
               Explore, test, and visualize your API endpoints.

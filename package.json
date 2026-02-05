@@ -1,5 +1,5 @@
 {
-  "name": "nami",
+  "name": "duke",
   "version": "1.0.0",
   "private": true,
   "main": "dist/main.js",
@@ -13,8 +13,8 @@
     "lint": "next lint"
   },
   "build": {
-    "appId": "com.apivis.app",
-    "productName": "Nami",
+    "appId": "com.duke.app",
+    "productName": "Duke",
     "asar": true,
     "compression": "maximum",
     "files": [

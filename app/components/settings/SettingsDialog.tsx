@@ -42,8 +42,8 @@ export function SettingsDialog() {
   const [settings, setSettings] = useState<SettingsState>(() => {
     if (typeof window !== 'undefined') {
       return {
-        defaultViewMode: (localStorage.getItem('nami-default-view') as ViewMode) || 'structure',
-        defaultEditor: localStorage.getItem('nami-default-editor') || 'system',
+        defaultViewMode: (localStorage.getItem('duke-default-view') as ViewMode) || 'structure',
+        defaultEditor: localStorage.getItem('duke-default-editor') || 'system',
       };
     }
     return { defaultViewMode: 'structure', defaultEditor: 'system' };
@@ -51,7 +51,7 @@ export function SettingsDialog() {
 
   const updateSetting = <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
     setSettings(prev => ({ ...prev, [key]: value }));
-    localStorage.setItem(`nami-default-${key === 'defaultViewMode' ? 'view' : 'editor'}`, value);
+    localStorage.setItem(`duke-default-${key === 'defaultViewMode' ? 'view' : 'editor'}`, value);
   };
 
   const themes = [
@@ -75,7 +75,7 @@ export function SettingsDialog() {
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
           <DialogDescription>
-            Customize your Nami experience.
+            Customize your Duke experience.
           </DialogDescription>
         </DialogHeader>
         

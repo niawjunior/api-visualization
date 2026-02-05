@@ -1,4 +1,4 @@
-# Nami
+# Duke
 
 A desktop application for exploring, testing, and visualizing API endpoints in your projects.
 
@@ -25,11 +25,11 @@ A desktop application for exploring, testing, and visualizing API endpoints in y
 
 ### How It Works
 
-Nami uses a multi-layer architecture where the Electron main process handles file system operations and code analysis, while the React frontend provides the visualization and user interface.
+Duke uses a multi-layer architecture where the Electron main process handles file system operations and code analysis, while the React frontend provides the visualization and user interface.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         Nami Desktop App                        │
+│                         Duke Desktop App                        │
 ├─────────────────────────────────────────────────────────────────┤
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │                    React Frontend (Renderer)              │  │

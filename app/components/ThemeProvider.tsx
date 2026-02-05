@@ -25,7 +25,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
      setMounted(true);
      // Load saved theme
      try {
-        const saved = localStorage.getItem('nami-theme') as Theme | null;
+        const saved = localStorage.getItem('duke-theme') as Theme | null;
         if (saved && ['dark', 'light', 'system'].includes(saved)) {
            setTheme(saved);
         }
@@ -35,7 +35,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!mounted) return;
     try {
-        localStorage.setItem('nami-theme', theme);
+        localStorage.setItem('duke-theme', theme);
     } catch {}
 
     const root = document.documentElement;

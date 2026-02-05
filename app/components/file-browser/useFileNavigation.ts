@@ -10,7 +10,7 @@ export function useFileNavigation(currentPath: string | undefined) {
     // Load recent paths
     useEffect(() => {
         try {
-            const stored = localStorage.getItem('nami-recent-paths');
+            const stored = localStorage.getItem('duke-recent-paths');
             if (stored) setRecentPaths(JSON.parse(stored));
         } catch (e) {
              console.error('Failed to load recent paths:', e);
@@ -24,7 +24,7 @@ export function useFileNavigation(currentPath: string | undefined) {
             const filtered = prev.filter(p => p !== currentPath);
             const updated = [currentPath, ...filtered].slice(0, 5);
             try {
-                localStorage.setItem('nami-recent-paths', JSON.stringify(updated));
+                localStorage.setItem('duke-recent-paths', JSON.stringify(updated));
             } catch (e) {}
             return updated;
         });
