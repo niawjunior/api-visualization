@@ -7,7 +7,7 @@
     "dev": "concurrently \"npm run dev:react\" \"npm run dev:electron\"",
     "dev:react": "next dev",
     "dev:electron": "wait-on tcp:3000 && tsc electron/main.ts electron/preload.ts electron/tools/fs.ts electron/tools/lib/types.ts electron/tools/lib/utils.ts electron/tools/lib/scanner.ts electron/tools/lib/read.ts  electron/tools/lib/analyze.ts electron/tools/searchWorker.ts --outDir dist --target esnext --module commonjs --esModuleInterop --skipLibCheck && cp -r electron/tools/lib/analyzers/python/scanner dist/tools/lib/analyzers/python/ && electron . --dev",
-    "build": "next build && tsc electron/main.ts electron/preload.ts electron/tools/fs.ts electron/tools/lib/types.ts electron/tools/lib/utils.ts electron/tools/lib/read.ts  electron/tools/lib/analyze.ts electron/tools/searchWorker.ts --outDir dist --target esnext --module commonjs --esModuleInterop --skipLibCheck && cp -r electron/tools/lib/analyzers/python/scanner dist/tools/lib/analyzers/python/",
+    "build": "next build && tsc electron/main.ts electron/preload.ts electron/tools/fs.ts electron/tools/lib/types.ts electron/tools/lib/utils.ts electron/tools/lib/read.ts electron/tools/lib/analyze.ts electron/tools/lib/project-detection.ts electron/tools/searchWorker.ts --outDir dist --target esnext --module commonjs --esModuleInterop --skipLibCheck && cp -r electron/tools/lib/analyzers/python/scanner dist/tools/lib/analyzers/python/",
     "dist": "npm run build && electron-builder",
     "start": "electron .",
     "lint": "next lint"
@@ -16,6 +16,11 @@
     "appId": "com.duke.app",
     "productName": "Duke",
     "asar": true,
+    "asarUnpack": [
+      "dist/tools/searchWorker.js",
+      "dist/tools/lib/**/*.js",
+      "dist/tools/lib/analyzers/python/**/*"
+    ],
     "compression": "maximum",
     "files": [
       "dist/**/*",
@@ -75,6 +80,7 @@
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
     "trash": "^10.0.1",
+    "typescript": "^5.9.3",
     "xlsx": "^0.18.5",
     "zod": "^3.22.4"
   },
@@ -90,7 +96,6 @@
     "eslint-config-next": "16.1.6",
     "postcss": "^8.4.31",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5",
     "wait-on": "^7.2.0"
   }
 }

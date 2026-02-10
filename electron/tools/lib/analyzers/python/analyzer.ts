@@ -43,7 +43,18 @@ export async function analyzePythonEndpoints(
         // Correct approach: `python3 -m scanner <projectPath>`
         // CWD should be the parent directory: `electron/tools/lib/analyzers/python`
         
-        const analyzersDir = path.join(__dirname); 
+        let analyzersDir = path.join(__dirname); 
+        
+        try {
+            // In production, use the unpacked directory
+            const { app } = require('electron');
+            if (app.isPackaged) {
+                analyzersDir = analyzersDir.replace('app.asar', 'app.asar.unpacked');
+            }
+        } catch (e) {
+            // Ignore if electron not available (e.g. testing)
+        }
+        
         // We expect `scanner` folder to be in `analyzersDir`.
         
         // Check for scanner directory existence

@@ -1,6 +1,7 @@
 import { app, BrowserWindow, Menu, MenuItemConstructorOptions } from "electron";
 import path from "path";
 import * as dotenv from 'dotenv';
+import serve from "electron-serve";
 
 // IPC Handlers
 import { registerFileSystemHandlers } from './ipc/filesystem';
@@ -13,6 +14,9 @@ const envPath = app.isPackaged
     : path.join(__dirname, '../.env');
 
 dotenv.config({ path: envPath });
+
+// Initialize electron-serve at module level (before app ready)
+const appServe = serve({ directory: path.join(__dirname, "../out") });
 
 // Set the app name for macOS menu bar
 app.setName('Duke');
@@ -110,14 +114,10 @@ const createWindow = () => {
       win.webContents.reloadIgnoringCache();
     });
   } else {
-    // Production mode - use static export
-    (async () => {
-      const serve = (await import("electron-serve")).default;
-      const appServe = serve({ directory: path.join(__dirname, "../out") });
-      appServe(win).then(() => {
-        win.loadURL("app://-");
-      });
-    })();
+    // Production mode - use static export via electron-serve
+    appServe(win).then(() => {
+      win.loadURL("app://-");
+    });
   }
 };
 

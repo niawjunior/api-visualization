@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { ipcMain, app } from 'electron';
 import path from 'path';
 import { isPathAllowed } from './guards';
 
@@ -6,10 +6,14 @@ import { isPathAllowed } from './guards';
 function runWorkerTask(type: string, payload: any): Promise<any> {
     return new Promise((resolve, reject) => {
         const { Worker } = require('worker_threads');
-        // Point to the worker file. 
-        // Note: We need to go up one level from 'ipc' to 'electron' (implied) then down to 'tools'.
-        // Actually, __dirname in `dist/ipc` will need to find `dist/tools/searchWorker.js`.
-        const workerPath = path.join(__dirname, '../tools/searchWorker.js');
+        
+        let workerPath = path.join(__dirname, '../tools/searchWorker.js');
+        
+        // In production, use the unpacked script to avoid ASAR issues with worker_threads
+        if (app.isPackaged) {
+            workerPath = workerPath.replace('app.asar', 'app.asar.unpacked');
+        }
+
         const worker = new Worker(workerPath);
         
         worker.on('message', (msg: any) => {
@@ -68,10 +72,18 @@ export function registerAnalysisHandlers() {
         return runWorkerTask('deps', { path: rootPath });
     });
 
-    // Detect Project
+// Detect Project
     ipcMain.handle('detect-project', async (event, rootPath: string) => {
         if (!isPathAllowed(rootPath)) throw new Error('Access denied');
-        return runWorkerTask('detect-project', { path: rootPath });
+        
+        try {
+            // Run in main process to avoid worker path resolution issues in ASAR
+            const { detectProject } = require('../tools/lib/project-detection');
+            return await detectProject(rootPath);
+        } catch (err) {
+            console.error('Project detection failed:', err);
+            return { type: 'unknown', isProject: false, path: rootPath };
+        }
     });
 
     // Analyze Route
