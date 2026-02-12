@@ -26,6 +26,7 @@ class ProjectScanner:
         self.endpoints: List[RouteDef] = []
         self.parent_child: Dict[str, List[str]] = {} 
         self.global_includes_children: Set[str] = set()
+        self.errors: List[Dict[str, str]] = []
         
         self.import_resolver = ImportResolver(self.root, self.files)
         # Type resolver initialized after file scan or lazily
@@ -66,6 +67,7 @@ class ProjectScanner:
                             self.files[rel_path] = fd
                                 
                     except Exception as e:
+                        self.errors.append({"file": rel_path, "error": str(e)})
                         logging.error(f"Failed to parse {rel_path}: {e}")
 
         self.type_resolver = TypeResolver(self.import_resolver, self.files)
@@ -187,7 +189,7 @@ def main():
     scanner.scan(deps_only=args.deps)
     
     if args.deps:
-        graph = generate_dependency_graph(scanner.files, scanner.import_resolver)
+        graph = generate_dependency_graph(scanner.files, scanner.import_resolver, scanner.errors)
         print(json.dumps(graph, indent=2))
         return
 

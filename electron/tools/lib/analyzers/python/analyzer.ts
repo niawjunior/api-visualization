@@ -40,43 +40,14 @@ export async function analyzePythonEndpoints(
     config?: ApiVizConfig
 ): Promise<ApiEndpoint[]> {
     return new Promise((resolve, reject) => {
-        // Correct approach: `python3 -m scanner <projectPath>`
-        // CWD should be the parent directory: `electron/tools/lib/analyzers/python`
-        
-        let analyzersDir = path.join(__dirname); 
-        
-        try {
-            // In production, use the unpacked directory
-            const { app } = require('electron');
-            if (app.isPackaged) {
-                analyzersDir = analyzersDir.replace('app.asar', 'app.asar.unpacked');
-            }
-        } catch (e) {
-            // Ignore if electron not available (e.g. testing)
-        }
-        
-        // We expect `scanner` folder to be in `analyzersDir`.
-        
-        // Check for scanner directory existence
-        const mainScannerPath = path.join(analyzersDir, 'scanner', '__main__.py');
+        const { getPythonEnv } = require('../../python-env');
+        const { pythonPath, cwd, env } = getPythonEnv();
 
-        if (!fs.existsSync(mainScannerPath)) {
-             console.error(`[PythonAnalyzer] Scanner package not found at: ${mainScannerPath}`);
-             resolve([]);
-             return;
-        }
-
-        // Ensure standard paths are included for GUI apps (Homebrew, etc.)
-        const env = {
-            ...process.env,
-            PATH: `/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${process.env.PATH || ''}`
-        };
-
-        console.log(`[PythonAnalyzer] Spawning scanner: python3 -m scanner ${projectPath}`);
+        console.log(`[PythonAnalyzer] Spawning scanner: ${pythonPath} -m scanner ${projectPath}`);
         
-        const pythonProcess = spawn('python3', ['-m', 'scanner', projectPath], { 
+        const pythonProcess = spawn(pythonPath, ['-m', 'scanner', projectPath], { 
             env,
-            cwd: analyzersDir // Execute from the folder containing 'scanner' package
+            cwd
         });
 
         let stdoutData = '';

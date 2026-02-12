@@ -4,25 +4,16 @@ import path from 'path';
 import fs from 'fs';
 import { DependencyGraph } from '../types';
 
+import { getPythonEnv } from '../../python-env';
+
 export function analyzePythonDependencies(projectPath: string): Promise<DependencyGraph> {
     return new Promise((resolve, reject) => {
-        // Validation: Verify scanner package exists
-        const scannerDir = path.join(__dirname, 'scanner');
-        if (!fs.existsSync(scannerDir)) {
-             console.error(`[PythonDeps] Scanner package not found at: ${scannerDir}`);
-             resolve({ nodes: [], edges: [] });
-             return;
-        }
-
-        const env = {
-            ...process.env,
-            PATH: `/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${process.env.PATH || ''}`
-        };
+        const { pythonPath, cwd, env } = getPythonEnv();
 
         // Run python3 -m scanner <path> --deps
-        const pythonProcess = spawn('python3', ['-m', 'scanner', projectPath, '--deps'], {
+        const pythonProcess = spawn(pythonPath, ['-m', 'scanner', projectPath, '--deps'], {
             env,
-            cwd: __dirname // Directory containing 'scanner' folder
+            cwd
         });
 
         let stdoutData = '';
@@ -55,6 +46,12 @@ export function analyzePythonDependencies(projectPath: string): Promise<Dependen
                 
                 const jsonStr = stdoutData.substring(jsonStart, jsonEnd + 1);
                 const graph: DependencyGraph = JSON.parse(jsonStr);
+                
+                // Debug logging removed for production
+                if (graph.errors && graph.errors.length > 0) {
+                     console.warn("[PythonDeps] Parsing errors occurred:", graph.errors);
+                }
+
                 resolve(graph);
             } catch (e) {
                 console.error("[PythonDeps] JSON Parse Error:", e);

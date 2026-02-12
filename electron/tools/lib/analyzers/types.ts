@@ -72,6 +72,7 @@ export interface DependencyEdge {
 export interface DependencyGraph {
     nodes: DependencyNode[];
     edges: DependencyEdge[];
+    errors?: Array<{ file: string; error: string }>;
 }
 
 /**

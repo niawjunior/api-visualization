@@ -1,9 +1,8 @@
-
 from typing import Dict, List, Any
 from .core.models import FileData
 from .core.resolver import ImportResolver
 
-def generate_dependency_graph(file_map: Dict[str, FileData], resolver: ImportResolver) -> Dict[str, Any]:
+def generate_dependency_graph(file_map: Dict[str, FileData], resolver: ImportResolver, errors: List[Dict[str, str]] = None) -> Dict[str, Any]:
     nodes = []
     edges = []
     added_nodes = set()
@@ -85,12 +84,15 @@ def generate_dependency_graph(file_map: Dict[str, FileData], resolver: ImportRes
                 
     # Auto-Aggregation: If too many nodes, group by folder
     if len(nodes) > 30:
-        return aggregate_by_folder(nodes, edges)
-
-    return {
-        "nodes": nodes,
-        "edges": edges
-    }
+        result = aggregate_by_folder(nodes, edges)
+    else:
+        result = {
+            "nodes": nodes,
+            "edges": edges
+        }
+    
+    result["errors"] = errors or []
+    return result
 
 def aggregate_by_folder(nodes: List[Dict], edges: List[Dict]) -> Dict[str, Any]:
     folder_nodes = {}

@@ -67,9 +67,26 @@ export function registerAnalysisHandlers() {
     });
 
     // Analyze Dependencies
+    // Analyze Dependencies - MOVED TO MAIN PROCESS
     ipcMain.handle('analyze-dependencies', async (event, rootPath: string) => {
         if (!isPathAllowed(rootPath)) throw new Error('Access denied');
-        return runWorkerTask('deps', { path: rootPath });
+        
+        try {
+             // 1. Detect if Python
+             const { detectProject } = require('../tools/lib/project-detection');
+             const projectInfo = await detectProject(rootPath);
+             
+             if (projectInfo.type === 'python') {
+                 const { analyzePythonDependencies } = require('../tools/lib/analyzers/python/deps-runner');
+                 return await analyzePythonDependencies(rootPath);
+             } else {
+                 const { analyze } = require('../tools/lib/analyzers');
+                 return await analyze(rootPath);
+             }
+        } catch (err: any) {
+            console.error('Dependency analysis failed:', err);
+            return { nodes: [], edges: [], errors: [{ file: 'root', error: err.message }] };
+        }
     });
 
 // Detect Project
