@@ -275,7 +275,10 @@ export default function MainInterface() {
       </button>
 
       {/* Main Area - VisualProjectMap (includes Structure/Deps/API modes) */}
-      <div className="flex-1 flex flex-col h-full bg-card rounded-xl border border-border overflow-hidden shadow-sm relative transition-all min-w-0">
+      <div className={cn(
+        "flex-1 flex flex-col h-full bg-card rounded-xl border border-border overflow-hidden shadow-sm relative transition-all min-w-0 duration-300 ease-in-out",
+        sidebarCollapsed && "pl-14" // Push content right to accommodate the floating toggle button
+      )}>
         <VisualProjectMap
           files={files}
           currentPath={currentPath}
