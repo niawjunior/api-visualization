@@ -5,13 +5,13 @@ A desktop application for exploring, testing, and visualizing API endpoints in y
 ## Features
 
 - **Project-Scoped File Explorer** - Open any project folder and navigate files within that scope
-- **API Endpoint Detection** - Automatically scans Python and Node.js projects for API routes
+- **API Endpoint Detection** - Automatically scans Python (FastAPI, Flask, Django) and Node.js (Next.js) projects for API routes
 - **Interactive API Console** - Test endpoints directly with request builder, response viewer, and timing metrics
 - **Visual Project Map** - Three view modes:
   - **Structure** - File/folder hierarchy visualization with interactive navigation
   - **Dependencies** - Import/export relationship graph
   - **API** - Grouped endpoint explorer with inline testing
-- **File Preview** - Preview images (PNG, JPG, GIF, WebP, SVG) and text files directly in the app
+- **File Preview** - Preview images (PNG, JPG, GIF, WebP, BMP, SVG) and text files directly in the app
 - **Content Search** - Search across file contents within your project
 - **Settings** - Configure theme (Light/Dark/System), default view mode, and preferred editor (VS Code, Cursor, Antigravity)
 - **Collapsible Sidebar** - Toggle the sidebar to maximize workspace area
@@ -169,9 +169,9 @@ npm run lint
 
 ### Node.js
 - Next.js (API routes + App Router)
-- Express.js
-- Nest.js
-- Fastify
+- Express.js (project detection only)
+- Nest.js (project detection only)
+- Fastify (project detection only)
 
 ## License
 
