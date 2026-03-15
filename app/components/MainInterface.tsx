@@ -85,7 +85,7 @@ export default function MainInterface() {
 
   // Refresh file list when currentPath changes
   useEffect(() => {
-    if (!currentPath || !window.electron) {
+    if (!currentPath || !window.electron || currentPath.startsWith('http')) {
       setFiles([]);
       return;
     }
@@ -194,7 +194,28 @@ export default function MainInterface() {
               <FolderOpen className="w-5 h-5" />
               Open Project
             </Button>
-            <p className="text-xs text-muted-foreground">or drag & drop a folder anywhere</p>
+            
+            <p className="text-xs text-muted-foreground w-full text-center my-2 uppercase tracking-widest font-semibold opacity-50">OR</p>
+            
+            <div className="flex items-center gap-2 w-full max-w-sm">
+              <input 
+                type="text" 
+                placeholder="https://.../openapi.json" 
+                className="flex-1 text-sm bg-background border border-border rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-primary"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                     const val = e.currentTarget.value;
+                     if (val) openProject(val);
+                  }
+                }}
+              />
+              <Button size="sm" variant="secondary" onClick={(e) => {
+                 const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                 if (input?.value) openProject(input.value);
+              }}>Open Schema</Button>
+            </div>
+            
+            <p className="text-xs text-muted-foreground mt-4">drag & drop a folder anywhere</p>
           </div>
 
           {/* Recent Projects */}

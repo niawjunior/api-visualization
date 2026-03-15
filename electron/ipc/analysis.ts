@@ -122,4 +122,33 @@ export function registerAnalysisHandlers() {
             return { success: false, error: error.message, endpoints: [] };
         }
     });
+
+    // Analyze OpenAPI Schema
+    ipcMain.handle('analyze-openapi', async (event, source: string) => {
+        try {
+            const { analyzeOpenAPI } = require('../tools/lib/analyzers/openapi/parser');
+            let spec;
+            
+            // Allow HTTP urls or local file paths
+            if (source.startsWith('http://') || source.startsWith('https://')) {
+                const res = await fetch(source);
+                if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+                spec = await res.json();
+            } else {
+                // If it's a local file, ensure it's allowed for security
+                if (!isPathAllowed(source) && !isPathAllowed(path.dirname(source))) {
+                     throw new Error('Access denied to local openapi schema');
+                }
+                const fs = require('fs/promises');
+                const content = await fs.readFile(source, 'utf-8');
+                spec = JSON.parse(content);
+            }
+            
+            const endpoints = await analyzeOpenAPI(spec, source);
+            return { success: true, endpoints };
+        } catch (error: any) {
+            console.error('OpenAPI analysis error:', error);
+            return { success: false, error: error.message, endpoints: [] };
+        }
+    });
 }

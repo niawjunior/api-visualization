@@ -42,3 +42,8 @@ class FileData:
         self.app_var: Optional[str] = None
         self.models: Dict[str, Dict[str, Any]] = {}
         self.constants: Dict[str, str] = {} # name -> literal_value
+        # For loop unrolling support
+        self.list_literals: Dict[str, list] = {}  # var_name -> list of parsed tuples
+        self.dict_literals: Dict[str, dict] = {}  # var_name -> nested dict of string keys
+        self.dict_router_keys: Dict[str, List[str]] = {}  # dict_var -> list of router var_names
+        self.dict_includes: List[tuple] = []  # [(caller_var, dict_var, include_children)]

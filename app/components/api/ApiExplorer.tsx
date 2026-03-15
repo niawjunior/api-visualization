@@ -56,7 +56,13 @@ export function ApiExplorer({ currentPath, onOpenFile, headerRight }: ApiExplore
         setError(null);
         
         try {
-            const result = await window.electron.analyzeApiEndpoints(currentPath);
+            let result;
+            if (currentPath.startsWith('http://') || currentPath.startsWith('https://') || currentPath.endsWith('.json')) {
+                result = await window.electron.analyzeOpenAPI(currentPath);
+            } else {
+                result = await window.electron.analyzeApiEndpoints(currentPath);
+            }
+            
             if (result.success) {
                 setEndpoints(result.endpoints);
             } else {

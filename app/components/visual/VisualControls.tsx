@@ -21,7 +21,7 @@ const projectTypeConfig: Record<ProjectType, ProjectTypeConfig> = {
   unknown: { icon: <Hexagon size={14} />, label: 'Folder', color: 'text-muted-foreground' },
 };
 
-export type ViewMode = 'structure' | 'dependencies' | 'api';
+export type ViewMode = 'structure' | 'dependencies' | 'api' | 'models';
 
 interface VisualControlsProps {
   searchQuery: string;
@@ -117,6 +117,21 @@ export function VisualControls({
           >
             <Network size={14} />
             API
+          </button>
+        )}
+        {canShowDependencies && (
+          <button
+            onClick={() => setViewMode('models')}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium transition-all",
+              viewMode === 'models'
+                ? "bg-background text-foreground shadow-sm" 
+                : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+            )}
+            title="View Shared Data Models"
+          >
+            <Hexagon size={14} />
+            Models
           </button>
         )}
       </div>

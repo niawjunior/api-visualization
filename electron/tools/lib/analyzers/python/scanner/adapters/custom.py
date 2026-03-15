@@ -19,10 +19,10 @@ class CustomAdapter(BaseAdapter):
             method, path = None, None
             resp_arg = None
             if 'create' in method_name: method, path = 'POST', "/"
-            elif 'update' in method_name: method, path = 'PUT', "/{id}"
-            elif 'delete' in method_name: method, path = 'DELETE', "/{id}"
+            elif 'update' in method_name: method, path = 'PUT', "/{pk}"
+            elif 'delete' in method_name: method, path = 'DELETE', "/{pk}"
             elif 'list' in method_name: method, path = 'GET', "/"
-            elif 'retrieve' in method_name: method, path = 'GET', "/{id}"
+            elif 'retrieve' in method_name: method, path = 'GET', "/{pk}"
             
             if method:
                 # Arg handling varies

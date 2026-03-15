@@ -23,6 +23,8 @@ import { buildGraphFromFiles, getLayoutedElements } from './utils/graphBuilder';
 import { VisualControls, ViewMode } from './VisualControls';
 import { useDependencyGraph } from '../hooks/useDependencyGraph';
 import { ApiExplorer } from '../api/ApiExplorer';
+import { EntityMap } from '../api/EntityMap';
+import { cn } from '@/lib/utils';
 import type { DetectedProject, FileEntry } from '@/lib/types';
 
 // --- Props ---
@@ -46,6 +48,13 @@ function VisualProjectMapContent({ files, currentPath, detectedProject, onNaviga
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('structure');
+
+  // Auto-switch to API mode for OpenAPI schemas
+  useEffect(() => {
+      if (currentPath.startsWith('http://') || currentPath.startsWith('https://') || currentPath.endsWith('.json')) {
+          setViewMode('api');
+      }
+  }, [currentPath]);
 
   // Determine if we CAN show dependencies/api
   const canShowDependencies = detectedProject?.isProject && detectedProject?.type !== 'unknown';
@@ -139,7 +148,7 @@ function VisualProjectMapContent({ files, currentPath, detectedProject, onNaviga
   const { setCenter } = useReactFlow(); // Hook for navigation
 
   // API Mode: Render ApiExplorer instead of ReactFlow (full-screen, seamless)
-  if (viewMode === 'api') {
+  if (viewMode === 'api' || viewMode === 'models') {
     const viewSwitcher = (
         <div className="flex items-center gap-2">
           <button
@@ -156,9 +165,18 @@ function VisualProjectMapContent({ files, currentPath, detectedProject, onNaviga
               Deps
             </button>
           )}
-          <span className="px-2.5 py-1 text-xs font-medium bg-primary/10 text-primary rounded-md">
-            API
-          </span>
+          <button
+              onClick={() => setViewMode('api')}
+              className={cn("px-2.5 py-1 text-xs font-medium rounded-md transition-colors", viewMode === 'api' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted')}
+            >
+              API
+          </button>
+          <button
+              onClick={() => setViewMode('models')}
+              className={cn("px-2.5 py-1 text-xs font-medium rounded-md transition-colors", viewMode === 'models' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted')}
+            >
+              Models
+          </button>
           {onClose && (
             <>
               <div className="w-px h-4 bg-border mx-1" />
@@ -173,15 +191,27 @@ function VisualProjectMapContent({ files, currentPath, detectedProject, onNaviga
         </div>
     );
 
-    return (
-      <div className="w-full h-full bg-background relative">
-        <ApiExplorer 
-          currentPath={projectRootPath}
-          onOpenFile={onOpenFile}
-          headerRight={viewSwitcher}
-        />
-      </div>
-    );
+    if (viewMode === 'api') {
+        return (
+          <div className="w-full h-full bg-background relative">
+            <ApiExplorer 
+              currentPath={projectRootPath}
+              onOpenFile={onOpenFile}
+              headerRight={viewSwitcher}
+            />
+          </div>
+        );
+    } else {
+        return (
+          <div className="w-full h-full bg-background relative">
+            <EntityMap 
+              currentPath={projectRootPath}
+              onOpenFile={onOpenFile}
+              headerRight={viewSwitcher}
+            />
+          </div>
+        );
+    }
   }
 
   return (

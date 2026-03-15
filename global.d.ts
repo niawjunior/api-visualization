@@ -91,6 +91,11 @@ declare global {
         endpoints: ApiEndpoint[]; 
         error?: string 
       }>;
+      analyzeOpenAPI: (source: string) => Promise<{ 
+        success: boolean; 
+        endpoints: ApiEndpoint[]; 
+        error?: string 
+      }>;
       analyzeRoute: (filePath: string) => Promise<{
         routes: Array<{
           method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD';

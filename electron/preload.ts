@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld("electron", {
   analyzeDependencies: (path: string) => ipcRenderer.invoke('analyze-dependencies', path),
   detectProject: (path: string) => ipcRenderer.invoke('detect-project', path),
   analyzeApiEndpoints: (path: string) => ipcRenderer.invoke('analyze-api-endpoints', path),
+  analyzeOpenAPI: (source: string) => ipcRenderer.invoke('analyze-openapi', source),
   analyzeRoute: (filePath: string) => ipcRenderer.invoke('analyze-route', filePath),
   
   // Get file path from dropped File object
